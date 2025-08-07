@@ -1,0 +1,53 @@
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: {{ tenant_name }}
+  namespace: {{ tenant_namespace }}
+spec:
+  image: quay.io/minio/minio:{{ minio.version | default('RELEASE.2023-11-20T22-40-07Z') }}
+  credsSecret:
+    name: minio-creds-secret
+  pools:
+  - servers: {{ kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | list | length }}
+    name: pool-0
+    volumesPerServer: {{ (kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | map(attribute='additional_disks') | list | first | default([]) | length) if (kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | list | length > 0) else 2 }}
+    volumeClaimTemplate:
+      metadata:
+        name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        storageClassName: directpv-min-io
+        resources:
+          requests:
+            storage: {{ (kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | map(attribute='additional_disks') | list | first | first).size | default('50Gi') if (kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | list | length > 0) else '50Gi' }}
+    resources:
+      requests:
+        memory: 2Gi
+        cpu: 1000m
+      limits:
+        memory: 4Gi
+        cpu: 2000m
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+  console:
+    image: quay.io/minio/console:{{ minio_console.version | default('v0.22.4') }}
+    replicas: 1
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+  certConfig:
+    commonName: ""
+    organizationName: []
+    dnsNames: []
+  requestAutoCert: false
+  env:
+  - name: MINIO_BROWSER_REDIRECT_URL
+    value: "https://{{ minio_console.hostname | default('minio-console.' + kubernetes_cluster.name + '.local') }}"
+  - name: MINIO_SERVER_URL
+    value: "https://{{ minio_api.hostname | default('minio-api.' + kubernetes_cluster.name + '.local') }}"

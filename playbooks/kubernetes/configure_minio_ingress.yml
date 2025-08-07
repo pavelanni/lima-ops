@@ -1,0 +1,98 @@
+---
+- name: Configure MinIO ingress
+  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  gather_facts: no
+  become: no
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  vars:
+    kubeconfig_path: "{{ ansible_user_dir }}/.kube/config"
+    objectstore_name: "{{ aistor.objectstore_name | default('primary-object-store') }}"
+    objectstore_namespace: "{{ aistor.objectstore_namespace | default('primary-object-store') }}"
+  
+  tasks:
+    - name: Create AIStor API ingress
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: aistor-api
+            namespace: "{{ objectstore_namespace }}"
+            annotations:
+              kubernetes.io/ingress.class: nginx
+              nginx.ingress.kubernetes.io/ssl-redirect: "false"
+              nginx.ingress.kubernetes.io/proxy-body-size: "0"
+              nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+              nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+          spec:
+            rules:
+            - host: "{{ minio_api.hostname | default('aistor-api.' + kubernetes_cluster.name + '.local') }}"
+              http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: "{{ objectstore_name }}-hl"
+                      port:
+                        number: 9000
+        kubeconfig: "{{ kubeconfig_path }}"
+    
+    - name: Create AIStor Console ingress
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: aistor-console
+            namespace: "{{ objectstore_namespace }}"
+            annotations:
+              kubernetes.io/ingress.class: nginx
+              nginx.ingress.kubernetes.io/ssl-redirect: "false"
+              nginx.ingress.kubernetes.io/proxy-body-size: "0"
+              nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+              nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+          spec:
+            rules:
+            - host: "{{ minio_console.hostname | default('aistor-console.' + kubernetes_cluster.name + '.local') }}"
+              http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: "{{ objectstore_name }}-console"
+                      port:
+                        number: 9001
+        kubeconfig: "{{ kubeconfig_path }}"
+    
+    - name: Get ingress information
+      ansible.builtin.shell: |
+        kubectl get ingress -n {{ objectstore_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: ingress_info
+      changed_when: false
+    
+    - name: Display ingress information
+      ansible.builtin.debug:
+        msg: "{{ ingress_info.stdout_lines }}"
+    
+    - name: Display access URLs
+      ansible.builtin.debug:
+        msg: |
+          AIStor Access URLs:
+          
+          API: http://{{ minio_api.hostname | default('aistor-api.' + kubernetes_cluster.name + '.local') }}
+          Console: http://{{ minio_console.hostname | default('aistor-console.' + kubernetes_cluster.name + '.local') }}
+          
+          Add these entries to your /etc/hosts file:
+          {% for host in groups[target_cluster + '_workers'] %}
+          {{ hostvars[host]['ansible_default_ipv4']['address'] }} {{ minio_api.hostname | default('aistor-api.' + kubernetes_cluster.name + '.local') }}
+          {{ hostvars[host]['ansible_default_ipv4']['address'] }} {{ minio_console.hostname | default('aistor-console.' + kubernetes_cluster.name + '.local') }}
+          {% endfor %}

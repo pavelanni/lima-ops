@@ -1,0 +1,105 @@
+# vars/prod-large.yml  
+---
+# Large production cluster configuration
+deployment:
+  type: "kubernetes"
+
+# MinIO configuration
+minio:
+  version: "latest"
+  console_port: 9001
+  api_port: 9000
+  root_user: "minioadmin"
+  root_password: "prod-secret-123"
+
+# AIStor configuration
+aistor:
+  license: ""  # REQUIRED: Set your SUBNET license here
+  operator_namespace: "aistor"
+  objectstore_name: "prod-object-store"
+  objectstore_namespace: "prod-object-store"
+  storage_class: "directpv-min-io"
+  service_type: "NodePort"
+
+# Kubernetes cluster configuration
+kubernetes_cluster:
+  name: "prod-large"
+  version: "1.28"
+  pod_cidr: "10.42.0.0/16"
+  service_cidr: "10.43.0.0/16"
+  
+  nodes:
+    # Control plane nodes (HA setup)
+    - name: "control-plane-01"
+      role: "control-plane"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "40GiB"
+      additional_disks: []
+    
+    - name: "control-plane-02"
+      role: "control-plane"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "40GiB"
+      additional_disks: []
+    
+    - name: "control-plane-03"
+      role: "control-plane"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "40GiB"
+      additional_disks: []
+    
+    # Worker nodes with large storage
+    - name: "worker-01"
+      role: "worker"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "20GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "100GiB"
+        - name: "disk2"
+          size: "100GiB"
+        - name: "disk3"
+          size: "100GiB"
+    
+    - name: "worker-02"
+      role: "worker"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "20GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "100GiB"
+        - name: "disk2"
+          size: "100GiB"
+        - name: "disk3"
+          size: "100GiB"
+    
+    - name: "worker-03"
+      role: "worker"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "20GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "100GiB"
+        - name: "disk2"
+          size: "100GiB"
+        - name: "disk3"
+          size: "100GiB"
+    
+    - name: "worker-04"
+      role: "worker"
+      cpus: 4
+      memory: "8GiB"
+      disk_size: "20GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "100GiB"
+        - name: "disk2"
+          size: "100GiB"
+        - name: "disk3"
+          size: "100GiB"

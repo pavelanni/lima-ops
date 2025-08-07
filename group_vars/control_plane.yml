@@ -1,0 +1,22 @@
+---
+# Variables specific to control plane nodes
+
+# Kubernetes control plane specific settings
+k8s_control_plane: true
+k8s_init_node: true
+
+# Additional packages for control plane
+control_plane_packages:
+  - jq
+  - yq
+
+# Resource requirements
+min_cpu_cores: 2
+min_memory_gb: 4
+
+# Kubernetes API server settings
+api_server_port: 6443
+api_server_bind_address: "0.0.0.0"
+
+# etcd settings
+etcd_data_dir: "/var/lib/etcd"

@@ -1,0 +1,50 @@
+---
+- name: Configure Lima VMs
+  hosts: "{{ target_cluster | default('demo-k8s') }}_all"
+  gather_facts: yes
+  become: yes
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  tasks:
+    - name: Update package cache
+      ansible.builtin.package:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+    
+    - name: Install required packages
+      ansible.builtin.package:
+        name:
+          - xfsprogs
+          - parted
+          - net-tools
+          - vim
+          - bc
+          - lsof
+        state: present
+    
+    - name: Configure additional disks
+      ansible.builtin.include_tasks: ../../tasks/configure_disks.yml
+      loop: "{{ additional_disks | default([]) }}"
+      loop_control:
+        loop_var: disk_item
+      when: additional_disks is defined and additional_disks | length > 0
+    
+    - name: Create directories for MinIO data
+      ansible.builtin.file:
+        path: "/mnt/{{ item.name }}/minio"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      loop: "{{ additional_disks | default([]) }}"
+      when: 
+        - additional_disks is defined
+        - additional_disks | length > 0
+        - "'data' in item.name"
+    
+    - name: Display disk configuration
+      ansible.builtin.debug:
+        msg: "Configured {{ additional_disks | length }} additional disk(s) on {{ inventory_hostname }}"
+      when: additional_disks is defined

@@ -1,0 +1,81 @@
+---
+# process_single_disk.yml
+# Handles unmounting, partitioning, formatting, mounting, and fstab management for a single disk
+# Based on the logic from mount_disks.sh
+
+- name: Check for existing partitions on disk
+  ansible.builtin.shell: lsblk -n -o NAME /dev/{{ disk.name }} | tail -n +2
+  register: existing_partitions
+  changed_when: false
+  failed_when: false
+
+- name: Unmount any existing partitions
+  ansible.builtin.mount:
+    path: "{{ item }}"
+    state: unmounted
+  loop: "{{ ansible_mounts | selectattr('device', 'match', '/dev/' + disk.name + '.*') | map(attribute='mount') | list }}"
+  when: ansible_mounts | selectattr('device', 'match', '/dev/' + disk.name + '.*') | list | length > 0
+
+- name: Remove fstab entries for this disk
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "^[^#]*{{ disk.name }}.*"
+    state: absent
+    backup: yes
+
+- name: Wipe existing filesystem signatures
+  ansible.builtin.shell: wipefs -a /dev/{{ disk.name }}
+  register: wipefs_result
+  changed_when: wipefs_result.stdout != ""
+  failed_when: false
+
+- name: Process disk formatting and mounting
+  block:
+    - name: Create GPT partition table
+      ansible.builtin.shell: |
+        parted -s /dev/{{ disk.name }} mklabel gpt
+        parted -s /dev/{{ disk.name }} mkpart primary 0% 100%
+      register: partition_result
+      changed_when: true
+
+    - name: Wait for partition to be created
+      ansible.builtin.pause:
+        seconds: 2
+
+    - name: Format partition with XFS
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: "/dev/{{ disk.name }}1"
+        force: yes
+      register: format_result
+
+    - name: Get filesystem UUID
+      ansible.builtin.shell: blkid -s UUID -o value /dev/{{ disk.name }}1
+      register: fs_uuid
+      changed_when: false
+
+    - name: Create mount point
+      ansible.builtin.file:
+        path: "/mnt/minio{{ disk_index + 1 }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Add to fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "UUID={{ fs_uuid.stdout }} /mnt/minio{{ disk_index + 1 }} xfs defaults 0 2"
+        backup: yes
+        create: yes
+
+    - name: Mount filesystem
+      ansible.builtin.mount:
+        path: "/mnt/minio{{ disk_index + 1 }}"
+        src: "UUID={{ fs_uuid.stdout }}"
+        fstype: xfs
+        state: mounted
+
+    - name: Display mount success
+      ansible.builtin.debug:
+        msg: "Successfully mounted {{ disk.name }} to /mnt/minio{{ disk_index + 1 }} (UUID: {{ fs_uuid.stdout }})"

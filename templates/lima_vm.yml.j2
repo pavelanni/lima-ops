@@ -1,0 +1,73 @@
+# lima_vm.yml.j2
+# This file defines a single Lima VM instance configuration
+
+# VM Image - using Rocky Linux 9.6 (matching your shell project)
+images:
+- location: "https://dl.rockylinux.org/pub/rocky/9.6/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+  arch: "x86_64"
+- location: "https://dl.rockylinux.org/pub/rocky/9.6/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2"
+  arch: "aarch64"
+
+arch: "{{ 'aarch64' if ansible_architecture == 'arm64' else ansible_architecture | default('aarch64') }}"
+vmType: "vz"
+
+# CPU and Memory
+cpus: {{ vm.cpus }}
+memory: "{{ vm.memory }}"
+
+# Root Disk
+disk: "{{ vm.disk_size }}"
+
+# Additional Disks
+{% if vm.additional_disks is defined and vm.additional_disks | length > 0 %}
+additionalDisks:
+{% for disk in vm.additional_disks %}
+  - name: "{{ disk_prefix }}-{{ kubernetes_cluster.name }}-{{ vm.name }}-{{ disk.name }}"
+    size: "{{ disk.size }}"
+{% endfor %}
+{% endif %}
+
+# For Kubernetes, you'll likely want to use a k8s template or configure cloud-init
+# to install k3s, k8s, etc. We'll use a placeholder for now.
+# You might want to copy a custom cloud-init.yaml for each VM here.
+# For simplicity, we'll assume a basic template://k8s or similar
+# or you'll handle k8s installation with subsequent Ansible tasks.
+
+# Example of a basic `template://k8s` config if you want to embed it
+# This assumes Lima supports embedding templates like this for additional config
+# If not, you'd use `template://k8s` in `limactl start` and handle other setup
+# with separate Ansible tasks.
+
+# This section is highly dependent on how you want Lima to assist with k8s
+# initial setup vs. doing it all with Ansible post-provisioning.
+# A common approach is to let Lima create the VM, and then Ansible does the k8s install.
+
+# Cloud-init configuration (example - you'll heavily customize this)
+# This is where you might prepare the VM for Kubernetes.
+# You can also use Ansible's `copy` and `shell` modules for this post-creation.
+# cloud-init:
+#   # An example for basic SSH setup, you might not need this if Lima handles it
+#   # users:
+#   #   - name: lima
+#   #     ssh_authorized_keys:
+#   #       - "ssh-rsa AAAAB3NzaC..." # Your SSH public key
+
+#   # Example of installing some packages with cloud-init
+#   # packages:
+#   #   - curl
+#   #   - vim
+#
+#   # Example of running commands on first boot
+#   # runcmd:
+#   #   - echo "Hello from cloud-init on {{ vm.name }}" >> /var/log/cloud-init-output.log
+
+# Port forwards for MinIO services
+portForwards:
+  - guestPort: 9000
+    hostPort: {{ 9100 + (vm_index * 100) }}  # MinIO API
+  - guestPort: 9001
+    hostPort: {{ 9101 + (vm_index * 100) }}  # MinIO Console
+{% if vm.role == 'control-plane' %}
+  - guestPort: 6443
+    hostPort: {{ 6443 + vm_index }}  # Kubernetes API
+{% endif %}

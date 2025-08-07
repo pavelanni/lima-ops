@@ -1,0 +1,23 @@
+---
+- name: Enable and start MinIO service
+  ansible.builtin.systemd:
+    name: minio
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Wait for MinIO service to be ready
+  ansible.builtin.wait_for:
+    port: "{{ minio.api_port }}"
+    host: "{{ ansible_default_ipv4.address }}"
+    delay: 5
+    timeout: 60
+
+- name: Check MinIO service status
+  ansible.builtin.systemd:
+    name: minio
+  register: minio_service_status
+
+- name: Display MinIO service status
+  ansible.builtin.debug:
+    msg: "MinIO service is {{ minio_service_status.status.ActiveState }} on {{ inventory_hostname }}"

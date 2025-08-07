@@ -1,0 +1,39 @@
+---
+- name: Create MinIO group
+  ansible.builtin.group:
+    name: "{{ minio_group }}"
+    state: present
+
+- name: Create MinIO user
+  ansible.builtin.user:
+    name: "{{ minio_user }}"
+    group: "{{ minio_group }}"
+    home: "{{ minio_home }}"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+
+- name: Create MinIO directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ minio_user }}"
+    group: "{{ minio_group }}"
+    mode: '0755'
+  loop:
+    - "{{ minio_home }}/bin"
+    - "{{ minio_home }}/etc"
+    - "{{ minio_home }}/logs"
+    - "/etc/minio"
+    - "/var/log/minio"
+
+- name: Set ownership of MinIO data directories
+  ansible.builtin.file:
+    path: "/mnt/{{ item.name }}"
+    state: directory
+    owner: "{{ minio_user }}"
+    group: "{{ minio_group }}"
+    mode: '0755'
+    recurse: yes
+  loop: "{{ additional_disks | default([]) }}"
+  when: additional_disks is defined and additional_disks | length > 0

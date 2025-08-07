@@ -1,0 +1,55 @@
+---
+- name: Manage Lima disks for cluster
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  
+  vars_files:
+    - "../../{{ config_file | default('vars/cluster_config.yml') }}"
+  
+  vars:
+    disk_prefix: "minio"
+    force_create: false
+  
+  tasks:
+    - name: Override cluster name if specified
+      ansible.builtin.set_fact:
+        kubernetes_cluster: "{{ kubernetes_cluster | combine({'name': cluster_name_override}) }}"
+      when: cluster_name_override is defined
+
+    - name: Calculate total disks needed
+      ansible.builtin.set_fact:
+        total_disks_needed: "{{ kubernetes_cluster.nodes | map(attribute='additional_disks') | flatten | length }}"
+    
+    - name: Display disk creation plan
+      ansible.builtin.debug:
+        msg: "Planning to create {{ total_disks_needed }} disks for cluster {{ kubernetes_cluster.name }}"
+    
+    - name: Check existing disks
+      ansible.builtin.shell: |
+        limactl disk ls --format json 2>/dev/null || echo "[]"
+      register: existing_disks_raw
+      changed_when: false
+      when: not ansible_check_mode
+    
+    - name: Parse existing disks
+      ansible.builtin.set_fact:
+        existing_disks: "{{ existing_disks_raw.stdout | from_json if existing_disks_raw is defined else [] }}"
+      when: not ansible_check_mode
+    
+    - name: Set dummy existing disks for check mode
+      ansible.builtin.set_fact:
+        existing_disks: []
+      when: ansible_check_mode
+    
+    - name: Create disks for each node
+      ansible.builtin.include_tasks: ../../tasks/create_node_disks.yml
+      loop: "{{ kubernetes_cluster.nodes }}"
+      loop_control:
+        loop_var: node
+        index_var: node_index
+      when: node.additional_disks is defined and node.additional_disks | length > 0
+    
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: "Disk creation complete. Run 'limactl disk ls' to verify."

@@ -1,0 +1,104 @@
+# playbook.yml
+---
+- name: Provision Lima VMs for Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars_files:
+    - ../../vars/cluster_config.yml # Load your cluster parameters
+
+  tasks:
+    - name: Ensure Lima configuration directory exists
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/.lima/{{ kubernetes_cluster.name }}"
+        state: directory
+        mode: '0755'
+
+    - name: Generate Lima VM configuration files
+      ansible.builtin.template:
+        src: "../../templates/lima_vm.yml.j2"
+        dest: "{{ ansible_env.HOME }}/.lima/{{ kubernetes_cluster.name }}/{{ item.name }}.yaml"
+      loop: "{{ kubernetes_cluster.nodes }}"
+      loop_control:
+        loop_var: vm
+
+    - name: Start Lima VMs
+      ansible.builtin.shell: "limactl start --name={{ item.name }} {{ ansible_env.HOME }}/.lima/{{ kubernetes_cluster.name }}/{{ item.name }}.yaml"
+      args:
+        creates: "{{ ansible_env.HOME }}/.lima/{{ item.name }}" # Prevents re-running if VM exists
+      loop: "{{ kubernetes_cluster.nodes }}"
+      loop_control:
+        loop_var: vm
+      register: lima_vm_start_output
+      changed_when: "'already exists' not in lima_vm_start_output.stderr" # Mark changed only if created
+
+    - name: Wait for Lima VMs to be reachable via SSH
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 300
+      loop: "{{ kubernetes_cluster.nodes }}"
+      loop_control:
+        loop_var: vm
+      vars:
+        ansible_host: "{{ item.name }}" # Lima VMs are typically reachable by name
+
+- name: Configure Kubernetes on Lima VMs
+  hosts: "{{ kubernetes_cluster.name }}-*" # Dynamically target the created VMs
+  gather_facts: yes
+  become: yes # For privileged operations inside the VM
+
+  pre_tasks:
+    - name: Ensure correct SSH user for Lima VMs
+      # Lima typically uses 'lima' user for SSH, and mounts the host's SSH key
+      # You might need to adjust this based on your Lima setup.
+      # If you're using default Lima setup, the ansible_user should be 'lima'
+      # and the private_key_file should point to Lima's generated key.
+      ansible.builtin.set_fact:
+        ansible_user: "lima"
+        ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.lima/{{ inventory_hostname }}/ssh/id_rsa"
+      # The inventory_hostname here will be the VM name (e.g., control-plane-01)
+      # assuming you dynamically add them to inventory.
+
+  tasks:
+    - name: Add host to in-memory inventory
+      ansible.builtin.add_host:
+        name: "{{ item.name }}"
+        groups:
+          - "{{ kubernetes_cluster.name }}-{{ item.role }}" # e.g., demo-k8s-control-plane, demo-k8s-worker
+          - "{{ kubernetes_cluster.name }}-all"
+      loop: "{{ kubernetes_cluster.nodes }}"
+      loop_control:
+        loop_var: item
+      changed_when: false # This task doesn't change anything on the target
+
+    - name: Configure additional disks (partition, format, mount)
+      block:
+        - name: Get list of existing partitions
+          ansible.builtin.command: "lsblk -J -o NAME,TYPE,MOUNTPOINT"
+          register: lsblk_output
+          changed_when: false
+
+        - name: Process additional disks
+          ansible.builtin.include_tasks: "../../tasks/configure_disk.yml"
+          loop: "{{ vm.additional_disks }}" # vm is from the previous loop in the first play
+          loop_control:
+            loop_var: disk_item
+          when: vm.additional_disks is defined and vm.additional_disks | length > 0
+
+    - name: Install Kubernetes components (kubeadm, kubelet, kubectl)
+      ansible.builtin.include_role:
+        name: kubernetes_install # A custom role you create for K8s installation
+      when: inventory_hostname in groups['{{ kubernetes_cluster.name }}-all']
+
+    - name: Initialize Kubernetes control plane
+      ansible.builtin.include_role:
+        name: kubernetes_control_plane # A custom role
+      when: inventory_hostname in groups['{{ kubernetes_cluster.name }}-control-plane']
+
+    - name: Join worker nodes to cluster
+      ansible.builtin.include_role:
+        name: kubernetes_worker_join # A custom role
+      when: inventory_hostname in groups['{{ kubernetes_cluster.name }}-worker']
+
+    # ... more tasks for CNI, dashboard, etc.

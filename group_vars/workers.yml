@@ -1,0 +1,20 @@
+---
+# Variables specific to worker nodes
+
+# Kubernetes worker specific settings
+k8s_worker: true
+k8s_init_node: false
+
+# Container runtime settings
+container_runtime: "containerd"
+
+# Resource settings
+min_cpu_cores: 1
+min_memory_gb: 2
+
+# Kubelet settings
+kubelet_max_pods: 110
+kubelet_pod_cidr: "10.244.0.0/16"
+
+# Storage settings for workers
+enable_local_storage: true

@@ -1,0 +1,96 @@
+---
+- name: Get available block devices
+  ansible.builtin.shell: |
+    lsblk -dpno NAME,SIZE,TYPE | grep disk | grep -v loop
+  register: available_disks
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Parse available disks
+  ansible.builtin.set_fact:
+    disk_info: "{{ available_disks.stdout_lines | map('regex_replace', '\\s+', ' ') | map('split', ' ') | list }}"
+  when: not ansible_check_mode and available_disks is defined
+
+- name: Set dummy disk info for check mode
+  ansible.builtin.set_fact:
+    disk_info: [["/dev/vdb", "{{ disk_item.size }}"], ["/dev/vdc", "{{ disk_item.size }}"]]
+  when: ansible_check_mode
+
+- name: Find unmounted disk for {{ disk_item.name }}
+  ansible.builtin.set_fact:
+    target_disk: "{{ item[0] }}"
+  loop: "{{ disk_info }}"
+  when: 
+    - item[1] == disk_item.size
+    - item[0] not in ansible_mounts | map(attribute='device') | list
+    - target_disk is not defined
+  loop_control:
+    loop_var: item
+
+- name: Fail if no suitable disk found
+  ansible.builtin.fail:
+    msg: "No unmounted disk of size {{ disk_item.size }} found for {{ disk_item.name }}"
+  when: target_disk is not defined
+
+- name: Check if disk already has partitions
+  ansible.builtin.shell: |
+    lsblk -no NAME {{ target_disk }} | tail -n +2
+  register: existing_partitions
+  changed_when: false
+  when: not ansible_check_mode and target_disk is defined
+
+- name: Set dummy partition info for check mode
+  ansible.builtin.set_fact:
+    existing_partitions: {"stdout_lines": []}
+  when: ansible_check_mode
+
+- name: Create GPT partition table on {{ target_disk }}
+  community.general.parted:
+    device: "{{ target_disk }}"
+    label: gpt
+    state: present
+  when: existing_partitions.stdout_lines | length == 0
+
+- name: Create primary partition on {{ target_disk }}
+  community.general.parted:
+    device: "{{ target_disk }}"
+    number: 1
+    state: present
+    part_type: primary
+    fs_type: xfs
+    part_start: "1MiB"
+    part_end: "100%"
+  when: existing_partitions.stdout_lines | length == 0
+
+- name: Format partition as XFS
+  community.general.filesystem:
+    fstype: xfs
+    dev: "{{ target_disk }}1"
+    force: false
+  when: existing_partitions.stdout_lines | length == 0
+
+- name: Create mount point
+  ansible.builtin.file:
+    path: "/mnt/{{ disk_item.name }}"
+    state: directory
+    mode: '0755'
+
+- name: Mount the disk
+  ansible.posix.mount:
+    src: "{{ target_disk }}1"
+    path: "/mnt/{{ disk_item.name }}"
+    fstype: xfs
+    opts: defaults
+    state: mounted
+
+- name: Add to fstab for persistent mounting
+  ansible.posix.mount:
+    src: "{{ target_disk }}1"
+    path: "/mnt/{{ disk_item.name }}"
+    fstype: xfs
+    opts: defaults
+    state: present
+
+- name: Reset target_disk variable
+  ansible.builtin.set_fact:
+    target_disk: null

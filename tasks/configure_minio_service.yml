@@ -1,0 +1,56 @@
+---
+- name: Generate MinIO server endpoints
+  ansible.builtin.set_fact:
+    minio_endpoints: "{{ minio_endpoints | default([]) + [item] }}"
+  loop: "{{ groups[target_cluster + '_all'] | map('extract', hostvars) | map(attribute='additional_disks') | map('default', []) | list }}"
+  loop_control:
+    index_var: node_index
+  vars:
+    node_name: "{{ groups[target_cluster + '_all'][node_index] }}"
+    node_endpoints: "{% for disk in item %}http://{{ node_name }}:{{ minio.api_port }}/mnt/{{ disk.name }}{% if not loop.last %} {% endif %}{% endfor %}"
+  when: item | length > 0
+  delegate_to: localhost
+  run_once: true
+
+- name: Build complete MinIO server command
+  ansible.builtin.set_fact:
+    minio_server_endpoints: "{{ groups[target_cluster + '_all'] | map('extract', hostvars) | selectattr('additional_disks', 'defined') | map(attribute='additional_disks') | list }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Calculate distributed endpoints
+  ansible.builtin.set_fact:
+    all_endpoints: []
+  delegate_to: localhost
+  run_once: true
+
+- name: Build endpoints for each node
+  ansible.builtin.set_fact:
+    all_endpoints: "{{ all_endpoints + node_endpoints }}"
+  loop: "{{ groups[target_cluster + '_all'] }}"
+  vars:
+    node_disks: "{{ hostvars[item].additional_disks | default([]) }}"
+    node_endpoints: "{{ node_disks | map('regex_replace', '^(.*)$', 'http://' + item + ':' + (minio.api_port | string) + '/mnt/\\1') | list }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Create MinIO environment file
+  ansible.builtin.template:
+    src: templates/minio.env.j2
+    dest: /etc/default/minio
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Create MinIO systemd service file
+  ansible.builtin.template:
+    src: templates/minio.service.j2
+    dest: /etc/systemd/system/minio.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes

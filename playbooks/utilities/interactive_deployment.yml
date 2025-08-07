@@ -1,0 +1,126 @@
+---
+- name: Interactive deployment type selection
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  vars:
+    deployment_types:
+      "1": "baremetal"
+      "2": "kubernetes" 
+      "3": "infrastructure-only"
+  
+  tasks:
+    - name: Display deployment options
+      ansible.builtin.debug:
+        msg: |
+          
+          ==========================================
+          Choose Your Deployment Type
+          ==========================================
+          
+          1) BARE-METAL MinIO
+             • Direct MinIO installation on VMs
+             • Better performance (no container overhead)
+             • Simpler architecture
+             • Good for: Pure object storage clusters
+          
+          2) KUBERNETES-BASED
+             • Container orchestration with AIStor
+             • Better scaling and management
+             • Integration with K8s ecosystem
+             • Good for: Mixed workloads, microservices
+          
+          3) INFRASTRUCTURE ONLY
+             • Just provision VMs and disks
+             • Decide application layer later
+             • Maximum flexibility
+          
+          ==========================================
+
+    - name: Get user's deployment choice
+      ansible.builtin.pause:
+        prompt: "\nEnter your choice (1, 2, or 3)"
+      register: deployment_choice
+
+    - name: Validate choice
+      ansible.builtin.fail:
+        msg: "Invalid choice. Please run again and select 1, 2, or 3."
+      when: deployment_choice.user_input not in deployment_types.keys()
+
+    - name: Get cluster name
+      ansible.builtin.pause:
+        prompt: "\nEnter cluster name (default: demo-cluster)"
+        default: "demo-cluster"
+      register: cluster_name_input
+
+    - name: Set deployment variables
+      ansible.builtin.set_fact:
+        chosen_deployment: "{{ deployment_types[deployment_choice.user_input] }}"
+        chosen_cluster_name: "{{ cluster_name_input.user_input | default('demo-cluster') }}"
+
+    - name: Display final configuration
+      ansible.builtin.debug:
+        msg: |
+          
+          ==========================================
+          Your Configuration:
+          ==========================================
+          Deployment Type: {{ chosen_deployment }}
+          Cluster Name: {{ chosen_cluster_name }}
+          
+          {% if chosen_deployment == 'baremetal' %}
+          Configuration File: vars/baremetal_config.yml
+          
+          Next Steps:
+          1. Review/customize: vars/baremetal_config.yml
+          2. Run: make validate DEPLOYMENT_TYPE=baremetal CLUSTER_NAME={{ chosen_cluster_name }}
+          3. Run: make full-setup DEPLOYMENT_TYPE=baremetal CLUSTER_NAME={{ chosen_cluster_name }}
+          
+          {% elif chosen_deployment == 'kubernetes' %}
+          Configuration File: vars/cluster_config.yml
+          
+          IMPORTANT: AIStor requires a SUBNET license!
+          1. Get license from: https://subnet.min.io
+          2. Add license to vars/cluster_config.yml (aistor.license field)
+          3. Run: make validate DEPLOYMENT_TYPE=kubernetes CLUSTER_NAME={{ chosen_cluster_name }}
+          4. Run: make full-setup DEPLOYMENT_TYPE=kubernetes CLUSTER_NAME={{ chosen_cluster_name }}
+          
+          {% else %}
+          Configuration File: vars/cluster_config.yml (or vars/baremetal_config.yml)
+          
+          Next Steps:
+          1. Review/customize configuration file
+          2. Run: make validate CLUSTER_NAME={{ chosen_cluster_name }}
+          3. Run: make provision configure CLUSTER_NAME={{ chosen_cluster_name }}
+          4. Choose deployment: make deploy-baremetal OR make deploy-kubernetes
+          {% endif %}
+          
+          ==========================================
+
+    - name: Save configuration hint
+      ansible.builtin.copy:
+        content: |
+          # Last deployment choice made with interactive session
+          # Generated: {{ ansible_date_time.iso8601 }}
+          
+          DEPLOYMENT_TYPE={{ chosen_deployment }}
+          CLUSTER_NAME={{ chosen_cluster_name }}
+          
+          # To use these settings:
+          {% if chosen_deployment != 'infrastructure-only' %}
+          make full-setup DEPLOYMENT_TYPE={{ chosen_deployment }} CLUSTER_NAME={{ chosen_cluster_name }}
+          {% else %}
+          make provision configure CLUSTER_NAME={{ chosen_cluster_name }}
+          {% endif %}
+        dest: .last_deployment_choice
+        mode: '0644'
+      when: chosen_deployment != 'infrastructure-only'
+
+    - name: Final reminder
+      ansible.builtin.debug:
+        msg: |
+          
+          💡 Your choices have been saved to .last_deployment_choice
+          💡 Run 'make help' to see all available commands
+          💡 Run 'make show-config' to verify current settings

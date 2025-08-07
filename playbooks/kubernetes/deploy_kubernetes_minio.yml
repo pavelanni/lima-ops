@@ -1,0 +1,42 @@
+---
+- name: Deploy Kubernetes cluster with AIStor (Commercial MinIO)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  tasks:
+    - name: Validate deployment type
+      ansible.builtin.fail:
+        msg: "This playbook is for Kubernetes deployment. Current deployment.type is {{ deployment.type }}"
+      when: deployment.type != "kubernetes"
+    
+    - name: Display deployment plan
+      ansible.builtin.debug:
+        msg: |
+          Deploying Kubernetes cluster with AIStor (Commercial MinIO):
+          - Cluster: {{ kubernetes_cluster.name }}
+          - Nodes: {{ kubernetes_cluster.nodes | length }}
+          - Control plane nodes: {{ kubernetes_cluster.nodes | selectattr('role', 'eq', 'control-plane') | list | length }}
+          - Worker nodes: {{ kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | list | length }}
+          - AIStor License: {{ 'Configured' if aistor.license != '' else 'MISSING - Required!' }}
+
+# Install Kubernetes (k3s) on the cluster
+- import_playbook: install_k3s.yml
+
+# Install prerequisites for MinIO
+- import_playbook: install_k8s_prerequisites.yml
+
+# Install DirectPV for storage provisioning
+- import_playbook: install_directpv.yml
+
+# Install AIStor (Commercial MinIO) Operator and Object Store
+- import_playbook: install_minio_operator.yml
+
+# Configure ingress for AIStor access
+- import_playbook: configure_minio_ingress.yml
+
+# Verify the installation
+- import_playbook: verify_k8s_minio.yml

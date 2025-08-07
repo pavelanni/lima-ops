@@ -1,0 +1,96 @@
+---
+- name: Install Kubernetes prerequisites
+  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  gather_facts: no
+  become: no
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  vars:
+    kubeconfig_path: "{{ ansible_user_dir }}/.kube/config"
+  
+  tasks:
+    - name: Install cert-manager
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: cert-manager
+        kubeconfig: "{{ kubeconfig_path }}"
+    
+    - name: Apply cert-manager CRDs
+      ansible.builtin.shell: |
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.crds.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: cert_manager_crds
+      changed_when: "'created' in cert_manager_crds.stdout or 'configured' in cert_manager_crds.stdout"
+    
+    - name: Install cert-manager
+      ansible.builtin.shell: |
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: cert_manager_install
+      changed_when: "'created' in cert_manager_install.stdout or 'configured' in cert_manager_install.stdout"
+    
+    - name: Wait for cert-manager to be ready
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=available --timeout=300s deployment/cert-manager -n cert-manager
+        kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-cainjector -n cert-manager
+        kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-webhook -n cert-manager
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    
+    - name: Install ingress-nginx
+      ansible.builtin.shell: |
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: ingress_nginx_install
+      changed_when: "'created' in ingress_nginx_install.stdout or 'configured' in ingress_nginx_install.stdout"
+    
+    - name: Wait for ingress-nginx to be ready
+      ansible.builtin.shell: |
+        kubectl wait --namespace ingress-nginx \
+          --for=condition=ready pod \
+          --selector=app.kubernetes.io/component=controller \
+          --timeout=300s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    
+    - name: Install krew plugin manager
+      ansible.builtin.shell: |
+        (
+          set -x; cd "$(mktemp -d)" &&
+          OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+          ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+          KREW="krew-${OS}_${ARCH}" &&
+          curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+          tar zxvf "${KREW}.tar.gz" &&
+          ./"${KREW}" install krew
+        )
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ ansible_user_dir }}/.krew/bin"
+      register: krew_install
+      changed_when: "'installed' in krew_install.stdout"
+      failed_when: 
+        - krew_install.rc != 0
+        - "'already installed' not in krew_install.stderr"
+    
+    - name: Add krew to PATH
+      ansible.builtin.lineinfile:
+        path: "{{ ansible_user_dir }}/.bashrc"
+        line: 'export PATH="${PATH}:${HOME}/.krew/bin"'
+        create: yes
+    
+    - name: Display installation status
+      ansible.builtin.debug:
+        msg: |
+          Kubernetes prerequisites installed:
+          ✓ cert-manager
+          ✓ ingress-nginx
+          ✓ krew plugin manager

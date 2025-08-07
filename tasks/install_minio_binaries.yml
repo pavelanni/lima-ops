@@ -1,0 +1,36 @@
+---
+- name: Download MinIO server binary
+  ansible.builtin.get_url:
+    url: "{{ minio_binary_url }}"
+    dest: "{{ minio_home }}/bin/minio"
+    owner: "{{ minio_user }}"
+    group: "{{ minio_group }}"
+    mode: '0755'
+    timeout: 60
+
+- name: Download MinIO client binary
+  ansible.builtin.get_url:
+    url: "{{ minio_client_url }}"
+    dest: "{{ minio_home }}/bin/mc"
+    owner: "{{ minio_user }}"
+    group: "{{ minio_group }}"
+    mode: '0755'
+    timeout: 60
+
+- name: Create symlinks for MinIO binaries
+  ansible.builtin.file:
+    src: "{{ minio_home }}/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    state: link
+  loop:
+    - minio
+    - mc
+
+- name: Verify MinIO installation
+  ansible.builtin.command: minio --version
+  register: minio_version
+  changed_when: false
+
+- name: Display MinIO version
+  ansible.builtin.debug:
+    msg: "MinIO installed: {{ minio_version.stdout }}"

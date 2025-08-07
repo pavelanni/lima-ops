@@ -1,0 +1,70 @@
+# vars/baremetal-simple.yml
+---
+# Simple bare-metal MinIO cluster configuration
+deployment:
+  type: "baremetal"
+
+# MinIO configuration for bare-metal deployment
+minio:
+  version: "latest"
+  console_port: 9001
+  api_port: 9000
+  root_user: "minioadmin"
+  root_password: "minioadmin123"
+  data_dirs:
+    - "/mnt/minio1/data"
+    - "/mnt/minio2/data"
+  distributed: true
+
+# Kubernetes cluster configuration (used for VM provisioning)
+kubernetes_cluster:
+  name: "baremetal-simple"
+  version: "1.28"
+  pod_cidr: "10.42.0.0/16"
+  service_cidr: "10.43.0.0/16"
+  
+  nodes:
+    # MinIO nodes
+    - name: "minio-01"
+      role: "worker"  # Using worker role for MinIO nodes
+      cpus: 2
+      memory: "4GiB"
+      disk_size: "15GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "50GiB"
+        - name: "disk2"
+          size: "50GiB"
+    
+    - name: "minio-02"
+      role: "worker"
+      cpus: 2
+      memory: "4GiB"
+      disk_size: "15GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "50GiB"
+        - name: "disk2"
+          size: "50GiB"
+    
+    - name: "minio-03"
+      role: "worker"
+      cpus: 2
+      memory: "4GiB"
+      disk_size: "15GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "50GiB"
+        - name: "disk2"
+          size: "50GiB"
+    
+    - name: "minio-04"
+      role: "worker"
+      cpus: 2
+      memory: "4GiB"
+      disk_size: "15GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "50GiB"
+        - name: "disk2"
+          size: "50GiB"

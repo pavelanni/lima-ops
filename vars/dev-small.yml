@@ -1,0 +1,48 @@
+# vars/dev-small.yml
+---
+# Small development cluster configuration
+deployment:
+  type: "kubernetes"
+
+# MinIO configuration
+minio:
+  version: "latest"
+  console_port: 9001
+  api_port: 9000
+  root_user: "minioadmin"
+  root_password: "minioadmin123"
+
+# AIStor configuration
+aistor:
+  license: ""
+  operator_namespace: "aistor"
+  objectstore_name: "dev-object-store"
+  objectstore_namespace: "dev-object-store"
+  storage_class: "directpv-min-io"
+  service_type: "NodePort"
+
+# Kubernetes cluster configuration
+kubernetes_cluster:
+  name: "dev-small"
+  version: "1.28"
+  pod_cidr: "10.42.0.0/16"
+  service_cidr: "10.43.0.0/16"
+  
+  nodes:
+    # Control plane node
+    - name: "control-plane-01"
+      role: "control-plane"
+      cpus: 2
+      memory: "2GiB"
+      disk_size: "10GiB"
+      additional_disks: []
+    
+    # Worker nodes
+    - name: "worker-01"
+      role: "worker"
+      cpus: 1
+      memory: "2GiB"
+      disk_size: "8GiB"
+      additional_disks:
+        - name: "disk1"
+          size: "10GiB"

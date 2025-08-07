@@ -1,0 +1,69 @@
+# vars/cluster_config.yml
+---
+# Deployment configuration
+deployment:
+  type: "kubernetes" # Options: "kubernetes", "baremetal"
+
+# MinIO configuration (for both deployment types)
+minio:
+  version: "latest"
+  console_port: 9001
+  api_port: 9000
+  root_user: "minioadmin"
+  root_password: "minioadmin123" # Change in production!
+
+# AIStor configuration (Commercial MinIO for Kubernetes deployment)
+aistor:
+  license: "" # REQUIRED: Set your SUBNET license here
+  operator_namespace: "aistor"
+  objectstore_name: "primary-object-store"
+  objectstore_namespace: "primary-object-store"
+  storage_class: "directpv-min-io"
+  service_type: "NodePort"
+  node_port: 31000 # Optional: specific NodePort for API
+  console:
+    enabled: true
+    service_type: "NodePort"
+    node_port: 31001 # Optional: specific NodePort for Console
+
+# MinIO/AIStor API and Console hostnames
+minio_api:
+  hostname: "aistor-api.demo-k8s.local"
+
+minio_console:
+  hostname: "aistor-console.demo-k8s.local"
+  version: "v0.22.4"
+
+# Kubernetes configuration
+k3s_version: "" # Leave empty for latest
+auto_initialize_drives: false # Set to true to auto-format drives (DANGEROUS!)
+
+kubernetes_cluster:
+  name: "demo-k8s"
+  nodes:
+  - name: "control-plane-01"
+    role: "control-plane"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "20GiB"
+    additional_disks: []
+  - name: "worker-01"
+    role: "worker"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "20GiB"
+    - name: "disk2"
+      size: "20GiB"
+  - name: "worker-02"
+    role: "worker"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "20GiB"
+    - name: "disk2"
+      size: "20GiB"

@@ -1,0 +1,55 @@
+---
+- name: Configure MinIO client alias
+  ansible.builtin.shell: |
+    mc alias set mycluster http://{{ inventory_hostname }}:{{ minio.api_port }} {{ minio.root_user }} {{ minio.root_password }}
+  register: mc_alias_result
+  changed_when: false
+  become_user: "{{ minio_user }}"
+
+- name: Check cluster health
+  ansible.builtin.shell: |
+    mc admin info mycluster
+  register: cluster_info
+  changed_when: false
+  become_user: "{{ minio_user }}"
+
+- name: Display cluster information
+  ansible.builtin.debug:
+    msg: "{{ cluster_info.stdout_lines }}"
+
+- name: Test bucket creation
+  ansible.builtin.shell: |
+    mc mb mycluster/test-bucket || true
+  register: bucket_creation
+  changed_when: "'Bucket created successfully' in bucket_creation.stdout"
+  become_user: "{{ minio_user }}"
+
+- name: List buckets
+  ansible.builtin.shell: |
+    mc ls mycluster
+  register: bucket_list
+  changed_when: false
+  become_user: "{{ minio_user }}"
+
+- name: Display available buckets
+  ansible.builtin.debug:
+    msg: "Available buckets: {{ bucket_list.stdout_lines }}"
+
+- name: Display cluster endpoints
+  ansible.builtin.debug:
+    msg: |
+      MinIO Cluster is ready!
+      
+      API Endpoints:
+      {% for host in groups[target_cluster + '_all'] %}
+      - http://{{ host }}:{{ minio.api_port }}
+      {% endfor %}
+      
+      Console Endpoints:
+      {% for host in groups[target_cluster + '_all'] %}
+      - http://{{ host }}:{{ minio.console_port }}
+      {% endfor %}
+      
+      Access Credentials:
+      - Username: {{ minio.root_user }}
+      - Password: {{ minio.root_password }}

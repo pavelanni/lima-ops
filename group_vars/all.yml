@@ -1,0 +1,29 @@
+---
+# Global variables for all hosts
+
+# Common packages to install on all nodes
+common_packages:
+  - vim
+  - curl
+  - wget
+  - net-tools
+  - lsof
+  - bc
+  - htop
+  - tree
+
+# Disk management defaults
+disk_filesystem: xfs
+disk_mount_options: "defaults,noatime"
+
+# MinIO defaults
+minio_user: "minio"
+minio_group: "minio"
+minio_data_dir: "/mnt"
+
+# Network settings
+internal_network: "192.168.5.0/24"
+
+# Timeouts
+vm_boot_timeout: 300
+ssh_connection_timeout: 30

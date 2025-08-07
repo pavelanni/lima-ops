@@ -1,0 +1,12 @@
+---
+- name: Mount additional disks on Lima VMs
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  tasks:
+    - name: Include disk mounting tasks
+      include_tasks: ../../tasks/mount_additional_disks.yml

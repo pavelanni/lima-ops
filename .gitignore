@@ -1,0 +1,70 @@
+# Lima Ansible Project - Git Ignore File
+
+# Ansible generated files
+*.log
+ansible.log
+.ansible/
+
+# Inventory files (dynamically generated)
+inventory/*.ini
+inventory/*.yml
+inventory/*.yaml
+
+# Lima VM files and configs (machine-specific)
+.lima/
+
+# Temporary and backup files
+*.tmp
+*.bak
+*~
+.DS_Store
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Secrets and sensitive data
+*secret*
+*password*
+*key*
+*.pem
+*.key
+
+# Local configuration overrides
+local_config.yml
+override.yml
+
+# Test and temporary clusters
+test-*
+temp-*
+debug-*
+
+# Lima disk files (usually large)
+*.qcow2
+*.raw
+
+# Documentation build artifacts
+docs/_build/
+site/

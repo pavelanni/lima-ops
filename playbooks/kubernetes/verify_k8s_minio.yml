@@ -1,0 +1,133 @@
+---
+- name: Verify Kubernetes MinIO installation
+  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  gather_facts: no
+  become: no
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  vars:
+    kubeconfig_path: "{{ ansible_user_dir }}/.kube/config"
+    operator_namespace: "{{ aistor.operator_namespace | default('aistor') }}"
+    objectstore_name: "{{ aistor.objectstore_name | default('primary-object-store') }}"
+    objectstore_namespace: "{{ aistor.objectstore_namespace | default('primary-object-store') }}"
+  
+  tasks:
+    - name: Check cluster status
+      ansible.builtin.shell: |
+        kubectl get nodes -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: cluster_nodes
+      changed_when: false
+    
+    - name: Display cluster nodes
+      ansible.builtin.debug:
+        msg: "{{ cluster_nodes.stdout_lines }}"
+    
+    - name: Check DirectPV status
+      ansible.builtin.shell: |
+        kubectl directpv info
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ ansible_user_dir }}/.krew/bin"
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: directpv_status
+      changed_when: false
+    
+    - name: Display DirectPV status
+      ansible.builtin.debug:
+        msg: "{{ directpv_status.stdout_lines }}"
+    
+    - name: Check AIStor operator status
+      ansible.builtin.shell: |
+        kubectl get pods -n {{ operator_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: operator_pods
+      changed_when: false
+    
+    - name: Display AIStor operator pods
+      ansible.builtin.debug:
+        msg: "{{ operator_pods.stdout_lines }}"
+    
+    - name: Check AIStor object store status
+      ansible.builtin.shell: |
+        kubectl get pods -n {{ objectstore_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: objectstore_pods
+      changed_when: false
+    
+    - name: Display AIStor object store pods
+      ansible.builtin.debug:
+        msg: "{{ objectstore_pods.stdout_lines }}"
+    
+    - name: Check AIStor services
+      ansible.builtin.shell: |
+        kubectl get services -n {{ objectstore_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: aistor_services
+      changed_when: false
+    
+    - name: Display AIStor services
+      ansible.builtin.debug:
+        msg: "{{ aistor_services.stdout_lines }}"
+    
+    - name: Check persistent volumes
+      ansible.builtin.shell: |
+        kubectl get pv
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: persistent_volumes
+      changed_when: false
+    
+    - name: Display persistent volumes
+      ansible.builtin.debug:
+        msg: "{{ persistent_volumes.stdout_lines }}"
+    
+    - name: Test AIStor connectivity (if mc is available)
+      ansible.builtin.shell: |
+        if command -v mc >/dev/null 2>&1; then
+          mc alias set k8s-aistor http://{{ minio_api.hostname | default('aistor-api.' + kubernetes_cluster.name + '.local') }} {{ minio.root_user }} {{ minio.root_password }}
+          mc admin info k8s-aistor
+        else
+          echo "MinIO client (mc) not available for testing"
+        fi
+      register: aistor_test
+      changed_when: false
+      failed_when: false
+    
+    - name: Display AIStor test results
+      ansible.builtin.debug:
+        msg: "{{ aistor_test.stdout_lines }}"
+    
+    - name: Display installation summary
+      ansible.builtin.debug:
+        msg: |
+          
+          ==========================================
+          Kubernetes AIStor Cluster Summary
+          ==========================================
+          
+          ✓ Cluster: {{ kubernetes_cluster.name }}
+          ✓ Nodes: {{ kubernetes_cluster.nodes | length }}
+          ✓ AIStor Object Store: {{ objectstore_name }}
+          ✓ Namespace: {{ objectstore_namespace }}
+          
+          Access Information:
+          - API: http://{{ minio_api.hostname | default('aistor-api.' + kubernetes_cluster.name + '.local') }}
+          - Console: http://{{ minio_console.hostname | default('aistor-console.' + kubernetes_cluster.name + '.local') }}
+          - Username: {{ minio.root_user }}
+          - Password: {{ minio.root_password }}
+          
+          Kubeconfig: ./kubeconfig-{{ kubernetes_cluster.name }}
+          
+          To access from your local machine:
+          export KUBECONFIG=./kubeconfig-{{ kubernetes_cluster.name }}
+          kubectl get pods -A
+          
+          NOTE: AIStor is the commercial version of MinIO with enterprise features.
+          
+          ==========================================

@@ -1,0 +1,59 @@
+---
+- name: Validate cluster setup before deployment
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  tasks:
+    - name: Check Lima version
+      ansible.builtin.shell: limactl --version
+      register: lima_version
+      changed_when: false
+      failed_when: lima_version.rc != 0
+    
+    - name: Display Lima version
+      ansible.builtin.debug:
+        msg: "Lima version: {{ lima_version.stdout }}"
+    
+    - name: Check available disk space
+      ansible.builtin.shell: df -h {{ ansible_env.HOME }}
+      register: disk_space
+      changed_when: false
+    
+    - name: Calculate total disk space needed
+      ansible.builtin.set_fact:
+        total_disk_space: "{{ kubernetes_cluster.nodes | map(attribute='disk_size') | map('regex_replace', 'GiB', '') | map('int') | sum }}"
+        additional_disk_space: "{{ kubernetes_cluster.nodes | map(attribute='additional_disks') | flatten | map(attribute='size') | map('regex_replace', 'GiB', '') | map('int') | sum }}"
+    
+    - name: Display space requirements
+      ansible.builtin.debug:
+        msg: |
+          Cluster {{ kubernetes_cluster.name }} requirements:
+          - Nodes: {{ kubernetes_cluster.nodes | length }}
+          - Root disk space: {{ total_disk_space }}GB
+          - Additional disk space: {{ additional_disk_space }}GB
+          - Total: {{ total_disk_space + additional_disk_space }}GB
+    
+    - name: Validate node configuration
+      ansible.builtin.assert:
+        that:
+          - item.name is defined
+          - item.role in ['control-plane', 'worker']
+          - item.cpus is defined and item.cpus > 0
+          - item.memory is defined
+        fail_msg: "Invalid configuration for node {{ item.name | default('unknown') }}"
+      loop: "{{ kubernetes_cluster.nodes }}"
+    
+    - name: Check for port conflicts
+      ansible.builtin.debug:
+        msg: "Port mapping: {{ item.name }} -> MinIO API: {{ 9100 + (ansible_loop.index0 * 100) }}, Console: {{ 9101 + (ansible_loop.index0 * 100) }}"
+      loop: "{{ kubernetes_cluster.nodes }}"
+      loop_control:
+        extended: yes
+    
+    - name: Validation complete
+      ansible.builtin.debug:
+        msg: "✓ Cluster configuration is valid and ready for deployment"

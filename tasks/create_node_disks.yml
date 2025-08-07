@@ -1,0 +1,24 @@
+---
+- name: Create disks for {{ kubernetes_cluster.name }}-{{ node.name }}
+  ansible.builtin.shell: |
+    limactl disk create {{ disk_prefix }}-{{ kubernetes_cluster.name }}-{{ node.name }}-{{ item.name }} --size {{ item.size }} --format raw
+  loop: "{{ node.additional_disks }}"
+  register: disk_creation
+  failed_when: 
+    - disk_creation.rc != 0
+    - "'already exists' not in disk_creation.stderr"
+  changed_when: "'already exists' not in disk_creation.stderr"
+  when: not ansible_check_mode
+
+- name: Display disk creation status for {{ kubernetes_cluster.name }}-{{ node.name }}
+  ansible.builtin.debug:
+    msg: "{{ kubernetes_cluster.name }}-{{ node.name }}: {{ 'Created' if item.changed else 'Already exists' }} disk {{ disk_prefix }}-{{ kubernetes_cluster.name }}-{{ node.name }}-{{ item.item.name }} ({{ item.item.size }})"
+  loop: "{{ disk_creation.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not ansible_check_mode and disk_creation is defined
+
+- name: Display check mode message for {{ kubernetes_cluster.name }}-{{ node.name }}
+  ansible.builtin.debug:
+    msg: "Check mode: Would create {{ node.additional_disks | length }} disk(s) for {{ kubernetes_cluster.name }}-{{ node.name }}"
+  when: ansible_check_mode

@@ -1,0 +1,58 @@
+# vars/baremetal_config.yml - Example configuration for bare-metal MinIO
+---
+# Deployment configuration
+deployment:
+  type: "baremetal"
+
+# MinIO configuration
+minio:
+  version: "latest"
+  console_port: 9001
+  api_port: 9000
+  root_user: "minioadmin"
+  root_password: "minioadmin123"  # Change in production!
+
+# Cluster configuration (reuses same structure as kubernetes_cluster)
+kubernetes_cluster:
+  name: "minio-cluster"
+  nodes:
+  - name: "minio-01"
+    role: "worker"  # All nodes are workers in bare-metal mode
+    cpus: 4
+    memory: "8GiB"
+    disk_size: "100GiB"
+    additional_disks:
+    - name: "data0"
+      size: "100GiB"
+    - name: "data1"
+      size: "100GiB"
+  - name: "minio-02"
+    role: "worker"
+    cpus: 4
+    memory: "8GiB"
+    disk_size: "100GiB"
+    additional_disks:
+    - name: "data0"
+      size: "100GiB"
+    - name: "data1"
+      size: "100GiB"
+  - name: "minio-03"
+    role: "worker"
+    cpus: 4
+    memory: "8GiB"
+    disk_size: "100GiB"
+    additional_disks:
+    - name: "data0"
+      size: "100GiB"
+    - name: "data1"
+      size: "100GiB"
+  - name: "minio-04"
+    role: "worker"
+    cpus: 4
+    memory: "8GiB"
+    disk_size: "100GiB"
+    additional_disks:
+    - name: "data0"
+      size: "100GiB"
+    - name: "data1"
+      size: "100GiB"

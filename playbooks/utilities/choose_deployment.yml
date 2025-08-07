@@ -1,0 +1,105 @@
+---
+- name: Choose deployment type for your cluster
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  tasks:
+    - name: Display deployment options
+      ansible.builtin.debug:
+        msg: |
+          
+          ==========================================
+          🚀 DEPLOYMENT TYPE SELECTOR
+          ==========================================
+          
+          📋 OPTION 1: BARE-METAL MinIO
+          ─────────────────────────────────
+          ✓ Direct MinIO installation on VMs
+          ✓ Better performance (no container overhead)  
+          ✓ Simpler architecture
+          ✓ Direct access to storage
+          ✓ Good for: Pure object storage clusters
+          
+          📋 OPTION 2: KUBERNETES-BASED (AIStor)
+          ─────────────────────────────────────────
+          ✓ Container orchestration with AIStor (Commercial MinIO)
+          ✓ Better scaling and management
+          ✓ Integration with K8s ecosystem
+          ✓ Enterprise features and support
+          ✓ Good for: Mixed workloads, microservices
+          ⚠️ Requires SUBNET license from https://subnet.min.io
+          
+          📋 OPTION 3: INFRASTRUCTURE ONLY
+          ──────────────────────────────────
+          ✓ Just provision VMs and disks
+          ✓ Decide application layer later
+          ✓ Maximum flexibility
+          
+          ==========================================
+    
+    - name: Check current configuration files
+      ansible.builtin.find:
+        paths: ../../vars/
+        patterns: "*.yml"
+      register: config_files
+    
+    - name: Display available configurations
+      ansible.builtin.debug:
+        msg: |
+          
+          Available Configuration Files:
+          {% for file in config_files.files %}
+          - {{ file.path | basename }}{% if 'baremetal' in file.path %} (bare-metal MinIO example){% elif 'cluster_config' in file.path %} (Kubernetes example){% endif %}
+          {% endfor %}
+          
+          To customize:
+          1. Copy and modify one of the config files
+          2. Update cluster name, node count, disk sizes, etc.
+          3. Run: make validate to check your configuration
+    
+    - name: Show commands for each option
+      ansible.builtin.debug:
+        msg: |
+          
+          ==========================================
+          🔥 QUICK START COMMANDS
+          ==========================================
+          
+          🅰️ FOR BARE-METAL MinIO:
+          ────────────────────────
+          make full-setup DEPLOYMENT_TYPE=baremetal CLUSTER_NAME=minio-cluster
+          
+          🅱️ FOR KUBERNETES + AIStor:
+          ─────────────────────────
+          # 1. First, add your SUBNET license to vars/cluster_config.yml
+          # 2. Then run:
+          make full-setup DEPLOYMENT_TYPE=kubernetes CLUSTER_NAME=k8s-cluster
+          
+          🅲 FOR INFRASTRUCTURE ONLY:
+          ──────────────────────────
+          make provision configure CLUSTER_NAME=my-cluster
+          # Later choose: make deploy-baremetal OR make deploy-kubernetes
+          
+          ==========================================
+          🔧 STEP-BY-STEP APPROACH:
+          ==========================================
+          
+          1️⃣ Validate configuration:
+             make validate DEPLOYMENT_TYPE=<baremetal|kubernetes>
+          
+          2️⃣ Create disks:
+             make create-disks
+          
+          3️⃣ Provision VMs:
+             make provision
+          
+          4️⃣ Configure VMs:
+             make configure
+          
+          5️⃣ Deploy application:
+             make deploy-baremetal  OR  make deploy-kubernetes
+          
+          ❓ For help: make help
+          ⚙️ Current config: make show-config
+          ==========================================

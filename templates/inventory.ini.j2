@@ -1,0 +1,26 @@
+# Generated inventory for {{ kubernetes_cluster.name }} cluster
+
+[{{ kubernetes_cluster.name }}_control_plane]
+{% for node in kubernetes_cluster.nodes %}
+{% if node.role == 'control-plane' %}
+{{ kubernetes_cluster.name }}_{{ node.name | replace('-', '_') }} ansible_host=lima-{{ kubernetes_cluster.name }}-{{ node.name }} ansible_user={{ current_user.stdout }} ansible_ssh_common_args='-F {{ ansible_env.HOME }}/.lima/{{ kubernetes_cluster.name }}-{{ node.name }}/ssh.config' node_role={{ node.role }} node_cpus={{ node.cpus }} node_memory={{ node.memory }} node_disk_size={{ node.disk_size }}{% if node.additional_disks is defined %} additional_disks='{{ node.additional_disks | to_json }}'{% endif %}
+
+{% endif %}
+{% endfor %}
+
+[{{ kubernetes_cluster.name }}_workers]
+{% for node in kubernetes_cluster.nodes %}
+{% if node.role == 'worker' %}
+{{ kubernetes_cluster.name }}_{{ node.name | replace('-', '_') }} ansible_host=lima-{{ kubernetes_cluster.name }}-{{ node.name }} ansible_user={{ current_user.stdout }} ansible_ssh_common_args='-F {{ ansible_env.HOME }}/.lima/{{ kubernetes_cluster.name }}-{{ node.name }}/ssh.config' node_role={{ node.role }} node_cpus={{ node.cpus }} node_memory={{ node.memory }} node_disk_size={{ node.disk_size }}{% if node.additional_disks is defined %} additional_disks='{{ node.additional_disks | to_json }}'{% endif %}
+
+{% endif %}
+{% endfor %}
+
+[{{ kubernetes_cluster.name }}_all:children]
+{{ kubernetes_cluster.name }}_control_plane
+{{ kubernetes_cluster.name }}_workers
+
+[{{ kubernetes_cluster.name }}_all:vars]
+# Common variables for all nodes
+# SSH config files are specified per-host above
+ansible_python_interpreter=/usr/bin/python3

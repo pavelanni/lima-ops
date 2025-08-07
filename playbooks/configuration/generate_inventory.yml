@@ -1,0 +1,38 @@
+---
+- name: Generate inventory file for Lima VMs
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  
+  vars_files:
+    - "../../{{ config_file | default('vars/cluster_config.yml') }}"
+  
+  vars: {}
+  
+  tasks:
+    - name: Override cluster name if specified
+      ansible.builtin.set_fact:
+        kubernetes_cluster: "{{ kubernetes_cluster | combine({'name': cluster_name_override}) }}"
+      when: cluster_name_override is defined
+
+    - name: Get current user
+      ansible.builtin.command: whoami
+      register: current_user
+      changed_when: false
+      check_mode: false
+
+    - name: Create inventory directory
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../inventory"
+        state: directory
+        mode: '0755'
+    
+    - name: Generate inventory file
+      ansible.builtin.template:
+        src: ../../templates/inventory.ini.j2
+        dest: "{{ playbook_dir }}/../../inventory/{{ kubernetes_cluster.name }}.ini"
+        mode: '0644'
+      
+    - name: Display inventory location
+      ansible.builtin.debug:
+        msg: "Inventory file generated at: {{ playbook_dir }}/../../inventory/{{ kubernetes_cluster.name }}.ini"

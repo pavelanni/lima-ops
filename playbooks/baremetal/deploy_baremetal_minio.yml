@@ -1,0 +1,49 @@
+---
+- name: Deploy bare-metal MinIO cluster
+  hosts: "{{ target_cluster | default('demo-k8s') }}_all"
+  gather_facts: yes
+  become: yes
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  vars:
+    minio_binary_url: "https://dl.min.io/server/minio/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/minio"
+    minio_client_url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
+    minio_user: "minio"
+    minio_group: "minio"
+    minio_home: "/opt/minio"
+    minio_data_dir: "/mnt"
+    
+  tasks:
+    - name: Validate deployment type
+      ansible.builtin.fail:
+        msg: "This playbook is for bare-metal deployment. Current deployment.type is {{ deployment.type }}"
+      when: deployment.type != "baremetal"
+    
+    - name: Create MinIO user and group
+      ansible.builtin.include_tasks: ../../tasks/setup_minio_user.yml
+    
+    - name: Install MinIO binaries
+      ansible.builtin.include_tasks: ../../tasks/install_minio_binaries.yml
+    
+    - name: Configure MinIO service
+      ansible.builtin.include_tasks: ../../tasks/configure_minio_service.yml
+    
+    - name: Start MinIO service
+      ansible.builtin.include_tasks: ../../tasks/start_minio_service.yml
+      
+- name: Verify MinIO cluster
+  hosts: "{{ target_cluster | default('demo-k8s') }}_all[0]"
+  gather_facts: no
+  become: no
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  vars:
+    minio_user: "minio"
+    
+  tasks:
+    - name: Verify MinIO cluster
+      ansible.builtin.include_tasks: ../../tasks/verify_minio_cluster.yml

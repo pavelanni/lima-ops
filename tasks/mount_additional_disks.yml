@@ -1,0 +1,64 @@
+---
+# mount_additional_disks.yml
+# Ansible implementation of the disk mounting logic from mount_disks.sh
+# Handles proper disk detection, partitioning, formatting, and fstab management
+
+- name: Get list of all block devices
+  ansible.builtin.command: lsblk -J -o NAME,SIZE,MOUNTPOINT,TYPE,LABEL
+  register: lsblk_output
+  changed_when: false
+
+- name: Parse block device information
+  ansible.builtin.set_fact:
+    all_devices: "{{ lsblk_output.stdout | from_json }}"
+
+- name: Find potential additional disks (exclude vda)
+  ansible.builtin.set_fact:
+    potential_disks: "{{ all_devices.blockdevices | selectattr('name', 'match', '^vd[b-z]$') | list }}"
+
+- name: Check each disk for cidata label
+  ansible.builtin.shell: blkid /dev/{{ item.name }} 2>/dev/null | grep -q 'LABEL="cidata"' && echo "cidata" || echo "ok"
+  register: disk_label_checks
+  loop: "{{ potential_disks }}"
+  changed_when: false
+  failed_when: false
+
+- name: Filter out cidata disks
+  ansible.builtin.set_fact:
+    additional_disks: "{{ potential_disks | selectattr('name', 'in', valid_disk_names) | list }}"
+  vars:
+    valid_disk_names: "{{ disk_label_checks.results | selectattr('stdout', 'equalto', 'ok') | map(attribute='item') | map(attribute='name') | list }}"
+
+- name: Display detected additional disks
+  ansible.builtin.debug:
+    msg: "Found {{ additional_disks | length }} additional disk(s): {{ additional_disks | map(attribute='name') | list }}"
+
+- name: Process each additional disk
+  include_tasks: process_single_disk.yml
+  loop: "{{ additional_disks }}"
+  loop_control:
+    loop_var: disk
+    index_var: disk_index
+  when: additional_disks | length > 0
+
+- name: Create MinIO data directories
+  ansible.builtin.file:
+    path: "/mnt/minio{{ disk_index + 1 }}/data"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop: "{{ additional_disks }}"
+  loop_control:
+    index_var: disk_index
+  when: additional_disks | length > 0
+
+- name: Display mount summary
+  ansible.builtin.debug:
+    msg: "Disk mounting complete. {{ additional_disks | length }} disk(s) mounted to /mnt/minio{1..{{ additional_disks | length }}}"
+  when: additional_disks | length > 0
+
+- name: No additional disks found
+  ansible.builtin.debug:
+    msg: "No additional disks found to mount"
+  when: additional_disks | length == 0

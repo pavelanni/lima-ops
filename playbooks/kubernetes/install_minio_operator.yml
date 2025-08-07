@@ -1,0 +1,161 @@
+---
+- name: Install AIStor (Commercial MinIO) via Helm
+  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  gather_facts: no
+  become: no
+  
+  vars_files:
+    - ../../vars/cluster_config.yml
+  
+  vars:
+    kubeconfig_path: "{{ ansible_user_dir }}/.kube/config"
+    operator_namespace: "{{ aistor.operator_namespace | default('aistor') }}"
+    objectstore_name: "{{ aistor.objectstore_name | default('primary-object-store') }}"
+    objectstore_namespace: "{{ aistor.objectstore_namespace | default('primary-object-store') }}"
+  
+  tasks:
+    - name: Install Helm if not present
+      ansible.builtin.shell: |
+        if ! command -v helm &> /dev/null; then
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        fi
+      register: helm_install
+      changed_when: "'helm' in helm_install.stdout"
+    
+    - name: Add MinIO Helm repository
+      ansible.builtin.shell: |
+        helm repo add minio https://helm.min.io/
+        helm repo update
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: helm_repo_add
+      changed_when: "'already exists' not in helm_repo_add.stderr"
+    
+    - name: Validate AIStor license configuration
+      ansible.builtin.fail:
+        msg: "AIStor license is required. Please set aistor.license in your configuration."
+      when: aistor.license is not defined or aistor.license == ""
+    
+    - name: Create AIStor operator values file
+      ansible.builtin.copy:
+        content: |
+          license: "{{ aistor.license }}"
+        dest: "{{ ansible_user_dir }}/aistor-operator-values.yaml"
+        mode: '0600'
+    
+    - name: Install AIStor Object Store Operator
+      ansible.builtin.shell: |
+        helm install aistor minio/aistor-objectstore-operator \
+          -n {{ operator_namespace }} --create-namespace \
+          -f {{ ansible_user_dir }}/aistor-operator-values.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: aistor_operator_install
+      changed_when: "'STATUS: deployed' in aistor_operator_install.stdout"
+      failed_when: 
+        - aistor_operator_install.rc != 0
+        - "'already exists' not in aistor_operator_install.stderr"
+    
+    - name: Wait for AIStor Operator to be ready
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/name=aistor-objectstore-operator -n {{ operator_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    
+    - name: Calculate AIStor configuration
+      ansible.builtin.set_fact:
+        worker_nodes: "{{ kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | list }}"
+        total_volumes: "{{ (kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | map(attribute='additional_disks') | list | first | default([]) | length) * (kubernetes_cluster.nodes | selectattr('role', 'eq', 'worker') | list | length) }}"
+    
+    - name: Create AIStor object store values file
+      ansible.builtin.copy:
+        content: |
+          objectStore:
+            name: {{ objectstore_name }}
+            pools:
+            - name: pool-0
+              servers: {{ worker_nodes | length }}
+              volumesPerServer: {{ (worker_nodes | first).additional_disks | default([]) | length if (worker_nodes | length > 0) else 4 }}
+              size: {{ ((worker_nodes | first).additional_disks | default([{'size': '50Gi'}]) | first).size | default('50Gi') if (worker_nodes | length > 0) else '50Gi' }}
+              storageClass: {{ aistor.storage_class | default('directpv-min-io') }}
+            services:
+              minio:
+                serviceType: {{ aistor.service_type | default('NodePort') }}
+                {% if aistor.node_port is defined %}
+                nodePort: {{ aistor.node_port }}
+                {% endif %}
+            {% if aistor.console is defined and aistor.console.enabled | default(true) %}
+            console:
+              enabled: true
+              serviceType: {{ aistor.console.service_type | default('NodePort') }}
+              {% if aistor.console.node_port is defined %}
+              nodePort: {{ aistor.console.node_port }}
+              {% endif %}
+            {% endif %}
+            {% if minio.root_user is defined and minio.root_password is defined %}
+            rootUser: {{ minio.root_user }}
+            rootPassword: {{ minio.root_password }}
+            {% endif %}
+        dest: "{{ ansible_user_dir }}/aistor-objectstore-values.yaml"
+        mode: '0644'
+    
+    - name: Install AIStor Object Store
+      ansible.builtin.shell: |
+        helm install {{ objectstore_name }} minio/aistor-objectstore \
+          -n {{ objectstore_namespace }} --create-namespace \
+          -f {{ ansible_user_dir }}/aistor-objectstore-values.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: aistor_objectstore_install
+      changed_when: "'STATUS: deployed' in aistor_objectstore_install.stdout"
+      failed_when: 
+        - aistor_objectstore_install.rc != 0
+        - "'already exists' not in aistor_objectstore_install.stderr"
+    
+    - name: Wait for AIStor Object Store to be ready
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=available --timeout=600s statefulset -l app.kubernetes.io/name=aistor-objectstore -n {{ objectstore_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: objectstore_wait
+      retries: 3
+      delay: 30
+      until: objectstore_wait.rc == 0
+    
+    - name: Get AIStor service information
+      ansible.builtin.shell: |
+        kubectl get services -n {{ objectstore_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: aistor_services
+      changed_when: false
+    
+    - name: Display AIStor services
+      ansible.builtin.debug:
+        msg: "{{ aistor_services.stdout_lines }}"
+    
+    - name: Get AIStor NodePort information
+      ansible.builtin.shell: |
+        kubectl get service {{ objectstore_name }}-hl -n {{ objectstore_namespace }} -o jsonpath='{.spec.ports[?(@.name=="minio")].nodePort}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: aistor_nodeport
+      changed_when: false
+      failed_when: false
+    
+    - name: Display AIStor access information
+      ansible.builtin.debug:
+        msg: |
+          AIStor Object Store '{{ objectstore_name }}' deployed successfully!
+          
+          Namespace: {{ objectstore_namespace }}
+          
+          Access credentials:
+          - Username: {{ minio.root_user | default('admin') }}
+          - Password: {{ minio.root_password | default('admin123') }}
+          
+          {% if aistor_nodeport.stdout != "" %}
+          NodePort Access: http://<any-worker-node-ip>:{{ aistor_nodeport.stdout }}
+          {% endif %}
+          
+          Services available in namespace '{{ objectstore_namespace }}'
