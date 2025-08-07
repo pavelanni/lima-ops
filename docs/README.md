@@ -2,7 +2,8 @@
 
 ## Overview
 
-Welcome to the Lima-Ops documentation! This directory contains comprehensive guides for both modern Ansible automation and legacy shell script approaches.
+Welcome to the Lima-Ops documentation! This directory contains comprehensive guides for both
+modern Ansible automation and legacy shell script approaches.
 
 ## Documentation Structure
 
@@ -38,9 +39,9 @@ docs/
 ## Getting Help
 
 1. **Check the main README**: `../README.md`
-2. **Review troubleshooting**: `troubleshooting.md`
-3. **Development docs**: `development.md` and `../CLAUDE.md`
-4. **GitHub Issues**: For bugs and feature requests
+1. **Review troubleshooting**: `troubleshooting.md`
+1. **Development docs**: `development.md` and `../CLAUDE.md`
+1. **GitHub Issues**: For bugs and feature requests
 
 ## Contributing to Documentation
 

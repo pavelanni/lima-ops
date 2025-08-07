@@ -4,12 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an Ansible-based project for provisioning and configuring clusters using Lima VMs. The project supports two deployment types:
+This is an Ansible-based project for provisioning and configuring clusters using Lima VMs.
+The project supports two deployment types:
 
 1. **Kubernetes-based clusters** - For container orchestration and microservices
-2. **Bare-metal MinIO clusters** - For high-performance object storage
+1. **Bare-metal MinIO clusters** - For high-performance object storage
 
-The project separates infrastructure provisioning (VMs, disks, networking) from application deployment, allowing you to choose your deployment type after creating the infrastructure.
+The project separates infrastructure provisioning (VMs, disks, networking) from application deployment,
+allowing you to choose your deployment type after creating the infrastructure.
 
 ## Architecture
 
@@ -21,12 +23,12 @@ The project follows a three-phase approach:
    - Starts Lima VMs with specified resources (CPU, memory, disk)
    - Generates inventory files for the cluster
 
-2. **VM Configuration Phase** (runs on Lima VMs):
+1. **VM Configuration Phase** (runs on Lima VMs):
    - Configures disk partitioning, formatting, and mounting
    - Installs common packages and tools
    - Prepares VMs for application deployment
 
-3. **Application Deployment Phase** (runs on Lima VMs):
+1. **Application Deployment Phase** (runs on Lima VMs):
    - **Kubernetes path**: Installs K8s components, initializes cluster
    - **Bare-metal MinIO path**: Installs MinIO, configures distributed storage
 
@@ -249,8 +251,8 @@ limactl shell <vm-name>
 **IMPORTANT**: AIStor (Commercial MinIO) requires a valid SUBNET license.
 
 1. **Get License**: Visit [SUBNET Portal](https://subnet.min.io) to obtain your license
-2. **Configure License**: Set `aistor.license` in your configuration file
-3. **Keep Secure**: The license is stored in values files with restricted permissions
+1. **Configure License**: Set `aistor.license` in your configuration file
+1. **Keep Secure**: The license is stored in values files with restricted permissions
 
 Example configuration:
 
@@ -298,7 +300,7 @@ Without a valid license, the AIStor operator installation will fail.
 
 🔄 **Next Steps:**
 - ✅ Disk mounting tested and working perfectly on lab cluster
-- Proceed with MinIO or Kubernetes installation 
+- Proceed with MinIO or Kubernetes installation
 - Deploy application layer (K8s/AIStor or bare-metal MinIO)
 
 **Available Clusters:**

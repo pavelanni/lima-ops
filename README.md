@@ -1,25 +1,33 @@
 # Lima-Ops: Comprehensive Lima VM Management
 
-A complete toolkit for provisioning and managing clusters using Lima VMs on macOS. Provides both modern Ansible automation and proven shell script approaches for maximum flexibility. Supports Kubernetes-based deployments and bare-metal MinIO clusters with enterprise-grade storage solutions.
+A complete toolkit for provisioning and managing clusters using Lima VMs on macOS.
+Provides both modern Ansible automation and proven shell script approaches for
+maximum flexibility. Supports Kubernetes-based deployments and bare-metal MinIO
+clusters with enterprise-grade storage solutions.
 
 ## Overview
 
-This project provides a comprehensive toolkit for creating development and production clusters on your local machine using Lima VMs. It offers two complementary approaches:
+This project provides a comprehensive toolkit for creating development and production
+clusters on your local machine using Lima VMs. It offers two complementary approaches:
 
 ### **🚀 Modern Approach (Recommended)**
+
 - **Ansible Automation**: Infrastructure-as-code with declarative configuration
 - **Multi-cluster Management**: Template-based cluster configurations
 - **Enterprise Integration**: AIStor (Commercial MinIO) support
 
 ### **⚡ Legacy Approach (Battle-tested)**
+
 - **Shell Scripts**: Proven automation scripts from production use
 - **Lima Templates**: Ready-to-use VM configurations
 - **Quick Deployment**: Fast cluster provisioning for immediate needs
 
 ### Supported Deployments
 
-- **Kubernetes Clusters**: Container orchestration with AIStor (Commercial MinIO) integration
-- **Bare-metal MinIO**: High-performance object storage clusters for dedicated storage workloads
+- **Kubernetes Clusters**: Container orchestration with AIStor (Commercial MinIO)
+  integration
+- **Bare-metal MinIO**: High-performance object storage clusters for dedicated
+  storage workloads
 - **Mixed Environments**: Combine approaches based on specific needs
 
 ## Quick Start
@@ -28,18 +36,21 @@ This project provides a comprehensive toolkit for creating development and produ
 
 - macOS with Apple Silicon or Intel
 - [Lima](https://lima-vm.io/) installed (`brew install lima`)
-- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) installed (`brew install ansible`)
+- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+  installed (`brew install ansible`)
 - At least 8GB RAM and 50GB free disk space (for development clusters)
 
 ### Installation
 
 1. Clone this repository:
+
 ```bash
 git clone https://github.com/your-username/lima_ansible.git
 cd lima_ansible
 ```
 
-2. Verify prerequisites:
+1. Verify prerequisites:
+
 ```bash
 lima --version
 ansible --version
@@ -48,6 +59,7 @@ ansible --version
 ### Deploy Your First Cluster
 
 #### **Modern Ansible Approach** (Recommended)
+
 ```bash
 # Small development cluster (1 control-plane + 1 worker)
 make ansible full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
@@ -60,6 +72,7 @@ limactl shell dev-control-plane-01
 ```
 
 #### **Legacy Shell Script Approach** (Coming Soon)
+
 ```bash
 # Quick MinIO cluster
 make legacy provision CLUSTER_SIZE=3
@@ -69,6 +82,7 @@ make legacy status
 ```
 
 #### **Choose Your Approach**
+
 ```bash
 # See all options
 make help
@@ -84,13 +98,13 @@ make legacy-help
 
 The project includes several pre-configured cluster templates:
 
-| Config File | Description | Nodes | Resources |
-|-------------|-------------|--------|-----------|
-| `vars/dev-small.yml` | Small development cluster | 1 control + 1 worker | 2 CPU, 2GB RAM each |
-| `vars/prod-large.yml` | Large production cluster | 3 control + 4 workers | 4 CPU, 8GB RAM each |
-| `vars/baremetal-simple.yml` | Simple MinIO storage | 4 storage nodes | 2 CPU, 4GB RAM each |
-| `vars/cluster_config.yml` | Default Kubernetes | 1 control + 2 workers | Variable resources |
-| `vars/baremetal_config.yml` | Default MinIO | Variable nodes | Variable resources |
+| Config File                 | Description          | Nodes                 | Resources           |
+| --------------------------- | -------------------- | --------------------- | ------------------- |
+| `vars/dev-small.yml`        | Small dev cluster    | 1 control + 1 worker  | 2 CPU, 2GB RAM each |
+| `vars/prod-large.yml`       | Large prod cluster   | 3 control + 4 workers | 4 CPU, 8GB RAM each |
+| `vars/baremetal-simple.yml` | Simple MinIO storage | 4 storage nodes       | 2 CPU, 4GB RAM each |
+| `vars/cluster_config.yml`   | Default Kubernetes   | 1 control + 2 workers | Variable resources  |
+| `vars/baremetal_config.yml` | Default MinIO        | Variable nodes        | Variable resources  |
 
 ## Usage
 
@@ -100,7 +114,7 @@ The project includes several pre-configured cluster templates:
 # Development cluster
 make full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
 
-# Production cluster  
+# Production cluster
 make full-setup CONFIG_FILE=vars/prod-large.yml CLUSTER_NAME=production
 
 # Bare-metal storage cluster
@@ -133,7 +147,7 @@ make deploy CLUSTER_NAME=dev
 
 ```bash
 make status              # Show VM status
-make show-config         # Show current configuration  
+make show-config         # Show current configuration
 make list-disks         # List Lima disks
 make destroy CLUSTER_NAME=dev  # Destroy cluster
 make help               # Show all available commands
@@ -142,18 +156,21 @@ make help               # Show all available commands
 ## Features
 
 ### Infrastructure Management
+
 - **Automated VM Provisioning**: Creates Lima VMs with specified resources
 - **Dynamic Disk Management**: Creates, formats, and mounts additional storage disks
 - **Smart Inventory Generation**: Dynamic Ansible inventory with SSH configuration
 - **Multi-cluster Support**: Deploy multiple isolated clusters simultaneously
 
 ### Storage Features
+
 - **XFS Filesystem**: High-performance filesystem for storage workloads
 - **UUID-based Mounting**: Reliable disk mounting across reboots
 - **Automatic Cleanup**: Handles existing mounts and filesystem signatures
 - **MinIO-optimized Paths**: Storage mounted to `/mnt/minio{n}` for compatibility
 
 ### Deployment Types
+
 - **Kubernetes**: K3s with AIStor (Commercial MinIO), DirectPV storage, ingress
 - **Bare-metal MinIO**: Direct MinIO installation for maximum performance
 - **Enterprise Features**: AIStor includes commercial support and advanced features
@@ -163,12 +180,12 @@ make help               # Show all available commands
 The project follows a three-phase deployment approach:
 
 1. **Infrastructure Phase**: VM creation, disk provisioning, networking setup
-2. **Configuration Phase**: OS configuration, disk mounting, package installation  
-3. **Application Phase**: Kubernetes or MinIO deployment and configuration
+1. **Configuration Phase**: OS configuration, disk mounting, package installation
+1. **Application Phase**: Kubernetes or MinIO deployment and configuration
 
 ### Directory Structure
 
-```
+```text
 lima-ops/
 ├── ansible/              # Modern Ansible automation
 │   ├── playbooks/        # Infrastructure and deployment playbooks
@@ -190,11 +207,13 @@ lima-ops/
 ### Creating Custom Configurations
 
 1. Copy an existing configuration:
+
 ```bash
 cp vars/dev-small.yml vars/my-custom.yml
 ```
 
-2. Edit the configuration:
+1. Edit the configuration:
+
 ```yaml
 kubernetes_cluster:
   name: "my-custom"
@@ -209,7 +228,8 @@ kubernetes_cluster:
           size: "100GiB"
 ```
 
-3. Deploy with your custom configuration:
+1. Deploy with your custom configuration:
+
 ```bash
 make full-setup CONFIG_FILE=vars/my-custom.yml CLUSTER_NAME=custom
 ```
@@ -227,18 +247,22 @@ make full-setup CONFIG_FILE=vars/my-custom.yml CLUSTER_NAME=custom
 **Important**: AIStor (Commercial MinIO) requires a valid SUBNET license.
 
 1. Visit [SUBNET Portal](https://subnet.min.io) to obtain your license
-2. Add the license to your configuration:
+
+1. Add the license to your configuration:
+
 ```yaml
 aistor:
   license: "your-subnet-license-string-here"
 ```
-3. Keep the license secure and do not commit it to version control
+
+1. Keep the license secure and do not commit it to version control
 
 ## Troubleshooting
 
 ### Common Issues
 
-**VM Creation Fails**
+#### VM Creation Fails
+
 ```bash
 # Check Lima installation
 lima --version
@@ -250,7 +274,8 @@ vm_stat | grep "Pages free"
 ls -la ~/.lima/
 ```
 
-**SSH Connection Issues**
+#### SSH Connection Issues
+
 ```bash
 # Check VM status
 limactl list
@@ -262,7 +287,8 @@ limactl shell CLUSTER_NAME-node-name
 make inventory CLUSTER_NAME=your-cluster
 ```
 
-**Disk Mounting Problems**
+#### Disk Mounting Problems
+
 ```bash
 # Check disk status
 make list-disks
@@ -274,7 +300,8 @@ limactl disk ls
 make mount-disks CLUSTER_NAME=your-cluster
 ```
 
-**Ansible Playbook Errors**
+#### Ansible Playbook Errors
+
 ```bash
 # Check syntax
 make syntax-check
@@ -289,11 +316,13 @@ ansible-playbook -vvv playbooks/infrastructure/provision_vms.yml
 ### Performance Tuning
 
 **For Development**:
+
 - Use `vars/dev-small.yml` configuration
 - Allocate minimum resources (2GB RAM per node)
 - Use smaller disk sizes
 
 **For Production Testing**:
+
 - Use `vars/prod-large.yml` configuration
 - Ensure sufficient host resources (32GB+ RAM recommended)
 - Monitor Lima VM resource usage
@@ -317,11 +346,11 @@ ansible-playbook -vvv playbooks/infrastructure/provision_vms.yml
 ### Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Test with multiple cluster configurations
-5. Update documentation as needed
-6. Submit a pull request
+1. Create a feature branch (`git checkout -b feature/amazing-feature`)
+1. Make your changes
+1. Test with multiple cluster configurations
+1. Update documentation as needed
+1. Submit a pull request
 
 ### Testing
 
@@ -356,4 +385,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Note**: This tool is designed for development and testing purposes. For production deployments, consider using dedicated infrastructure providers and enterprise-grade solutions.
+**Note**: This tool is designed for development and testing purposes. For production
+deployments, consider using dedicated infrastructure providers and enterprise-grade
+solutions.
