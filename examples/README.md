@@ -29,10 +29,10 @@ Each example directory contains:
 ## Usage Pattern
 
 1. **Choose your example** based on your use case
-2. **Copy the configuration** to your working directory
-3. **Customize** as needed for your environment
-4. **Run the example** following the README
-5. **Learn and adapt** for your own deployments
+1. **Copy the configuration** to your working directory
+1. **Customize** as needed for your environment
+1. **Run the example** following the README
+1. **Learn and adapt** for your own deployments
 
 ## Contributing Examples
 

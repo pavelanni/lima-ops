@@ -198,7 +198,6 @@ lima-ops/
 │   └── scripts/         # Provisioning and management scripts
 ├── docs/                # Documentation and guides
 ├── examples/            # Usage examples and tutorials
-├── inventory/           # Generated inventory files (shared)
 └── README.md           # This file
 ```
 
