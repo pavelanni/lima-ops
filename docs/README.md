@@ -39,7 +39,7 @@ docs/
 
 1. **Check the main README**: `../README.md`
 2. **Review troubleshooting**: `troubleshooting.md`
-3. **Development docs**: `../CLAUDE.md`
+3. **Development docs**: `development.md` and `../CLAUDE.md`
 4. **GitHub Issues**: For bugs and feature requests
 
 ## Contributing to Documentation

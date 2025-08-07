@@ -1,8 +1,6 @@
-# Development Documentation
+# CLAUDE.md
 
-This file contains detailed development information for the Lima-Ops project.
-
-**Note**: For Claude Code specific instructions, see the main `CLAUDE.md` file in the project root.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
