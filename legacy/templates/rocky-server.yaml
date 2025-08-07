@@ -1,0 +1,53 @@
+# Rocky Linux 9 Server Template for Lima 1.1+
+# Based on pavelanni/lima_templates
+
+vmType: "vz"
+os: "linux"
+arch: "aarch64"
+images:
+- location: "rocky:9"
+  arch: "aarch64"
+  
+minVersion: "1.1.0"
+
+# https://github.com/lima-vm/lima/blob/master/docs/mount.md
+mounts:
+- location: "~"
+  sshfs:
+    cache: true
+    foldCase: false
+- location: "/tmp/lima"
+  writable: true
+
+mountType: "sshfs"
+
+disk: "20G"
+
+# Install necessary packages
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    export DEBIAN_FRONTEND=noninteractive
+    
+    # Install useful packages
+    yum update -y
+    yum install -y net-tools vim bc lsof
+
+# Network configuration for Lima 1.1+
+networks:
+- lima: user-v2
+
+# Resource allocation
+cpus: 2
+memory: "4GiB"
+
+# SSH configuration
+ssh:
+  localPort: 0
+  forwardAgent: false
+  loadDotSSHPubKeys: true
+
+# VirtIO filesystem not supported on vz
+mountType.9p: false

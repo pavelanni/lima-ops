@@ -31,14 +31,34 @@ ansible-help: ## Show Ansible automation help
 	@cd ansible && make help
 
 legacy-help: ## Show legacy scripts help
-	@echo "Legacy Shell Script Automation"
-	@echo "=============================="
-	@echo "Coming soon: Shell script automation from lima_templates"
+	@echo "Legacy Shell Script Automation (Battle-tested)"
+	@echo "=============================================="
+	@echo "Based on proven scripts from lima_templates repository"
 	@echo
-	@echo "Available once migration is complete:"
-	@echo "  make legacy-provision CLUSTER_SIZE=3"
-	@echo "  make legacy-storage"
-	@echo "  make legacy-minio"
+	@echo "Quick Start:"
+	@echo "  legacy/scripts/quick_cluster.sh -n 3 -d 2 -s 20GiB    # 3-node cluster"
+	@echo "  legacy/scripts/quick_cluster.sh -h                    # Show help"
+	@echo
+	@echo "Individual Scripts:"
+	@echo "  Disk Management:"
+	@echo "    legacy/scripts/create_disks.sh -n 4 -s 50GiB       # Create storage disks"
+	@echo "    legacy/scripts/mount_disks.sh                      # Mount disks (run in VM)"
+	@echo
+	@echo "  Cluster Management:"
+	@echo "    legacy/scripts/create_lima_cluster.sh -t template  # Create VM cluster"
+	@echo "    legacy/scripts/delete_lima_cluster.sh -p prefix    # Delete cluster"
+	@echo
+	@echo "  MinIO Setup:"
+	@echo "    legacy/scripts/setup_minio_users.sh -n 3           # Setup MinIO users"
+	@echo
+	@echo "Templates:"
+	@echo "  legacy/templates/rocky-server.yaml     # Rocky Linux 9 server"
+	@echo "  legacy/templates/rocky-client.yaml     # Rocky Linux 9 client with tools"
+	@echo
+	@echo "Documentation:"
+	@echo "  docs/legacy/                           # Legacy script documentation"
+	@echo
+	@echo "Note: These are proven scripts from production MinIO deployments"
 
 # Delegate to Ansible by default
 ansible: ## Run Ansible automation
