@@ -1,15 +1,26 @@
-# Lima Ansible Cluster Management
+# Lima-Ops: Comprehensive Lima VM Management
 
-An Ansible-based infrastructure automation tool for provisioning and managing clusters using Lima VMs on macOS. Supports both Kubernetes-based deployments and bare-metal MinIO clusters with enterprise-grade storage solutions.
+A complete toolkit for provisioning and managing clusters using Lima VMs on macOS. Provides both modern Ansible automation and proven shell script approaches for maximum flexibility. Supports Kubernetes-based deployments and bare-metal MinIO clusters with enterprise-grade storage solutions.
 
 ## Overview
 
-This project provides a complete infrastructure-as-code solution for creating development and production clusters on your local machine using Lima VMs. It separates infrastructure provisioning from application deployment, allowing you to choose between Kubernetes or bare-metal MinIO deployments after creating the infrastructure.
+This project provides a comprehensive toolkit for creating development and production clusters on your local machine using Lima VMs. It offers two complementary approaches:
+
+### **🚀 Modern Approach (Recommended)**
+- **Ansible Automation**: Infrastructure-as-code with declarative configuration
+- **Multi-cluster Management**: Template-based cluster configurations
+- **Enterprise Integration**: AIStor (Commercial MinIO) support
+
+### **⚡ Legacy Approach (Battle-tested)**
+- **Shell Scripts**: Proven automation scripts from production use
+- **Lima Templates**: Ready-to-use VM configurations
+- **Quick Deployment**: Fast cluster provisioning for immediate needs
 
 ### Supported Deployments
 
 - **Kubernetes Clusters**: Container orchestration with AIStor (Commercial MinIO) integration
 - **Bare-metal MinIO**: High-performance object storage clusters for dedicated storage workloads
+- **Mixed Environments**: Combine approaches based on specific needs
 
 ## Quick Start
 
@@ -36,15 +47,37 @@ ansible --version
 
 ### Deploy Your First Cluster
 
+#### **Modern Ansible Approach** (Recommended)
 ```bash
 # Small development cluster (1 control-plane + 1 worker)
-make full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
+make ansible full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
 
 # Check cluster status
-make status
+make ansible status
 
 # SSH into a node
 limactl shell dev-control-plane-01
+```
+
+#### **Legacy Shell Script Approach** (Coming Soon)
+```bash
+# Quick MinIO cluster
+make legacy provision CLUSTER_SIZE=3
+
+# Check status
+make legacy status
+```
+
+#### **Choose Your Approach**
+```bash
+# See all options
+make help
+
+# Ansible automation help
+make ansible-help
+
+# Legacy scripts help (when available)
+make legacy-help
 ```
 
 ## Configuration Options
@@ -136,16 +169,20 @@ The project follows a three-phase deployment approach:
 ### Directory Structure
 
 ```
-├── playbooks/
-│   ├── infrastructure/     # VM and disk provisioning
-│   ├── configuration/      # VM setup and configuration
-│   ├── kubernetes/         # K8s deployment playbooks
-│   ├── baremetal/         # MinIO deployment playbooks
-│   └── utilities/         # Helper and validation tools
-├── vars/                  # Cluster configuration files
-├── templates/             # Jinja2 templates for configs
-├── tasks/                # Reusable Ansible tasks
-└── inventory/            # Generated inventory files
+lima-ops/
+├── ansible/              # Modern Ansible automation
+│   ├── playbooks/        # Infrastructure and deployment playbooks
+│   ├── vars/            # Cluster configuration templates
+│   ├── templates/       # Jinja2 templates
+│   ├── tasks/           # Reusable Ansible tasks
+│   └── Makefile         # Ansible workflow automation
+├── legacy/              # Battle-tested shell scripts
+│   ├── templates/       # Lima VM templates
+│   └── scripts/         # Provisioning and management scripts
+├── docs/                # Documentation and guides
+├── examples/            # Usage examples and tutorials
+├── inventory/           # Generated inventory files (shared)
+└── README.md           # This file
 ```
 
 ## Customization
