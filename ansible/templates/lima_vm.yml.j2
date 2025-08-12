@@ -11,6 +11,10 @@ images:
 arch: "{{ 'aarch64' if ansible_architecture == 'arm64' else ansible_architecture | default('aarch64') }}"
 vmType: "vz"
 
+# Network configuration - use user-v2 for proper VM isolation and unique IPs
+networks:
+- lima: "user-v2"
+
 # CPU and Memory
 cpus: {{ vm.cpus }}
 memory: "{{ vm.memory }}"
@@ -23,7 +27,12 @@ disk: "{{ vm.disk_size }}"
 additionalDisks:
 {% for disk in vm.additional_disks %}
   - name: "{{ disk_prefix }}-{{ kubernetes_cluster.name }}-{{ vm.name }}-{{ disk.name }}"
-    size: "{{ disk.size }}"
+{% if deployment.type == "baremetal" %}
+    format: true
+    fsType: "xfs"
+{% else %}
+    format: false
+{% endif %}
 {% endfor %}
 {% endif %}
 

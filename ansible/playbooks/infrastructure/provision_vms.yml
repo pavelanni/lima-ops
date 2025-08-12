@@ -64,16 +64,16 @@
     
     - name: Create inventory directory
       ansible.builtin.file:
-        path: "{{ playbook_dir }}/inventory"
+        path: "{{ playbook_dir }}/../../inventory"
         state: directory
         mode: '0755'
     
     - name: Generate inventory file
       ansible.builtin.template:
         src: ../../templates/inventory.ini.j2
-        dest: "{{ playbook_dir }}/inventory/{{ kubernetes_cluster.name }}.ini"
+        dest: "{{ playbook_dir }}/../../inventory/{{ kubernetes_cluster.name }}.ini"
         mode: '0644'
       
     - name: Display inventory location
       ansible.builtin.debug:
-        msg: "Inventory file generated at: {{ playbook_dir }}/inventory/{{ kubernetes_cluster.name }}.ini"
+        msg: "Inventory file generated at: {{ playbook_dir }}/../../inventory/{{ kubernetes_cluster.name }}.ini"

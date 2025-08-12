@@ -6,9 +6,9 @@ ansible.log
 .ansible/
 
 # Inventory files (dynamically generated)
-inventory/*.ini
-inventory/*.yml
-inventory/*.yaml
+ansible/inventory/*.ini
+ansible/inventory/*.yml
+ansible/inventory/*.yaml
 
 # Lima VM files and configs (machine-specific)
 .lima/

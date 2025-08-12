@@ -26,12 +26,12 @@ aistor:
     service_type: "NodePort"
     node_port: 31001 # Optional: specific NodePort for Console
 
-# MinIO/AIStor API and Console hostnames
+# MinIO/AIStor API and Console hostnames (will use cluster name dynamically)
 minio_api:
-  hostname: "aistor-api.demo-k8s.local"
+  hostname: "aistor-api.{{ kubernetes_cluster.name }}.local"
 
 minio_console:
-  hostname: "aistor-console.demo-k8s.local"
+  hostname: "aistor-console.{{ kubernetes_cluster.name }}.local"
   version: "v0.22.4"
 
 # Kubernetes configuration
@@ -39,7 +39,7 @@ k3s_version: "" # Leave empty for latest
 auto_initialize_drives: false # Set to true to auto-format drives (DANGEROUS!)
 
 kubernetes_cluster:
-  name: "demo-k8s"
+  name: "lab"
   nodes:
   - name: "control-plane-01"
     role: "control-plane"

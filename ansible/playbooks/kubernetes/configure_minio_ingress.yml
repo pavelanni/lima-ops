@@ -1,6 +1,6 @@
 ---
 - name: Configure MinIO ingress
-  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  hosts: "{{ target_cluster }}_control_plane[0]"
   gather_facts: no
   become: no
   

@@ -1,6 +1,6 @@
 ---
 - name: Install K3s on control plane nodes
-  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane"
+  hosts: "{{ target_cluster }}_control_plane"
   gather_facts: yes
   become: yes
   
@@ -39,7 +39,7 @@
         k3s_node_token: "{{ node_token.content | b64decode | trim }}"
 
 - name: Install K3s on worker nodes
-  hosts: "{{ target_cluster | default('demo-k8s') }}_workers"
+  hosts: "{{ target_cluster }}_workers"
   gather_facts: yes
   become: yes
   
@@ -64,7 +64,7 @@
       changed_when: "'systemd' in k3s_agent_install_result.stdout"
 
 - name: Configure kubectl access
-  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  hosts: "{{ target_cluster }}_control_plane[0]"
   gather_facts: yes
   become: no
   
@@ -74,14 +74,16 @@
   tasks:
     - name: Create .kube directory
       ansible.builtin.file:
-        path: "{{ ansible_user_dir }}/.kube"
+        path: "{{ ansible_env.HOME }}/.kube"
         state: directory
         mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
     
     - name: Copy kubeconfig
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
-        dest: "{{ ansible_user_dir }}/.kube/config"
+        dest: "{{ ansible_env.HOME }}/.kube/config"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         mode: '0600'
@@ -90,18 +92,18 @@
     
     - name: Update kubeconfig server address
       ansible.builtin.replace:
-        path: "{{ ansible_user_dir }}/.kube/config"
+        path: "{{ ansible_env.HOME }}/.kube/config"
         regexp: 'https://127\.0\.0\.1:6443'
         replace: "https://{{ ansible_default_ipv4.address }}:6443"
     
     - name: Fetch kubeconfig to local machine
       ansible.builtin.fetch:
-        src: "{{ ansible_user_dir }}/.kube/config"
+        src: "{{ ansible_env.HOME }}/.kube/config"
         dest: "./kubeconfig-{{ kubernetes_cluster.name }}"
         flat: yes
 
 - name: Label nodes for storage
-  hosts: "{{ target_cluster | default('demo-k8s') }}_control_plane[0]"
+  hosts: "{{ target_cluster }}_control_plane[0]"
   gather_facts: no
   become: no
   

@@ -1,6 +1,7 @@
 # vars/dev-small.yml
 ---
 # Small development cluster configuration
+# 1 worker node with 4 disks 10GiB each
 deployment:
   type: "kubernetes"
 
@@ -24,25 +25,31 @@ aistor:
 # Kubernetes cluster configuration
 kubernetes_cluster:
   name: "dev-small"
-  version: "1.28"
+  version: "1.32"
   pod_cidr: "10.42.0.0/16"
   service_cidr: "10.43.0.0/16"
-  
+
   nodes:
-    # Control plane node
-    - name: "control-plane-01"
-      role: "control-plane"
-      cpus: 2
-      memory: "2GiB"
-      disk_size: "10GiB"
-      additional_disks: []
-    
-    # Worker nodes
-    - name: "worker-01"
-      role: "worker"
-      cpus: 1
-      memory: "2GiB"
-      disk_size: "8GiB"
-      additional_disks:
-        - name: "disk1"
-          size: "10GiB"
+  # Control plane node
+  - name: "control-plane-01"
+    role: "control-plane"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks: []
+
+  # Worker nodes
+  - name: "worker-01"
+    role: "worker"
+    cpus: 1
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "10GiB"
+    - name: "disk2"
+      size: "10GiB"
+    - name: "disk3"
+      size: "10GiB"
+    - name: "disk4"
+      size: "10GiB"

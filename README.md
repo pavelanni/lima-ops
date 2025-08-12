@@ -1,24 +1,28 @@
 # Lima-Ops: Comprehensive Lima VM Management
 
 A complete toolkit for provisioning and managing clusters using Lima VMs on macOS.
-Provides both modern Ansible automation and proven shell script approaches for
-maximum flexibility. Supports Kubernetes-based deployments and bare-metal MinIO
-clusters with enterprise-grade storage solutions.
+Features user-friendly shell script automation with comprehensive error handling,
+interactive setup wizards, and rich cluster management capabilities. Supports
+Kubernetes-based deployments and bare-metal MinIO clusters with enterprise-grade
+storage solutions.
+
+> **✨ New!** This project now uses intuitive shell scripts instead of Makefiles for better user experience, error handling, and flexibility. All previous functionality is preserved with improved usability.
 
 ## Overview
 
 This project provides a comprehensive toolkit for creating development and production
 clusters on your local machine using Lima VMs. It offers two complementary approaches:
 
-### **🚀 Modern Approach (Recommended)**
+### **🚀 Shell Script Automation (Recommended)**
 
-- **Ansible Automation**: Infrastructure-as-code with declarative configuration
-- **Multi-cluster Management**: Template-based cluster configurations
+- **User-friendly Scripts**: Interactive setup with comprehensive error handling
+- **Flexible Deployment**: Step-by-step or full automation workflows
+- **Rich Management**: Built-in cluster status, logs, and SSH utilities
 - **Enterprise Integration**: AIStor (Commercial MinIO) support
 
-### **⚡ Legacy Approach (Battle-tested)**
+### **⚡ Legacy Approach (Available)**
 
-- **Shell Scripts**: Proven automation scripts from production use
+- **Direct Shell Scripts**: Proven automation scripts from production use in `legacy/`
 - **Lima Templates**: Ready-to-use VM configurations
 - **Quick Deployment**: Fast cluster provisioning for immediate needs
 
@@ -45,8 +49,8 @@ clusters on your local machine using Lima VMs. It offers two complementary appro
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/your-username/lima_ansible.git
-cd lima_ansible
+git clone https://github.com/pavelanni/lima-ops.git
+cd lima-ops
 ```
 
 1. Verify prerequisites:
@@ -56,55 +60,55 @@ lima --version
 ansible --version
 ```
 
+- Lima should be of version 1.1+
+- Ansible was tested with version 2.18 (core)
+
 ### Deploy Your First Cluster
 
-#### **Modern Ansible Approach** (Recommended)
+#### **Interactive Setup** (Recommended for beginners)
+
+```bash
+# Launch the interactive setup wizard
+./scripts/interactive-setup.sh
+```
+
+#### **Direct Command Line** (For experienced users)
 
 ```bash
 # Small development cluster (1 control-plane + 1 worker)
-make ansible full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh --config ansible/vars/dev-small.yml --name dev
 
 # Check cluster status
-make ansible status
+./scripts/manage-cluster.sh status dev
 
 # SSH into a node
-limactl shell dev-control-plane-01
+./scripts/manage-cluster.sh ssh dev control-plane-01
 ```
 
-#### **Legacy Shell Script Approach** (Coming Soon)
+#### **Available Scripts**
 
 ```bash
-# Quick MinIO cluster
-make legacy provision CLUSTER_SIZE=3
+# Main deployment orchestration
+./scripts/deploy-cluster.sh --help
 
-# Check status
-make legacy status
-```
+# Cluster management utilities  
+./scripts/manage-cluster.sh --help
 
-#### **Choose Your Approach**
-
-```bash
-# See all options
-make help
-
-# Ansible automation help
-make ansible-help
-
-# Legacy scripts help (when available)
-make legacy-help
+# Interactive wizard
+./scripts/interactive-setup.sh
 ```
 
 ## Configuration Options
 
 The project includes several pre-configured cluster templates:
 
-| Config File                 | Description          | Nodes                 | Resources           |
-| --------------------------- | -------------------- | --------------------- | ------------------- |
-| `vars/dev-small.yml`        | Small dev cluster    | 1 control + 1 worker  | 2 CPU, 2GB RAM each |
-| `vars/prod-large.yml`       | Large prod cluster   | 3 control + 4 workers | 4 CPU, 8GB RAM each |
-| `vars/baremetal-simple.yml` | Simple MinIO storage | 4 storage nodes       | 2 CPU, 4GB RAM each |
-| `vars/cluster_config.yml`   | Default Kubernetes   | 1 control + 2 workers | Variable resources  |
-| `vars/baremetal_config.yml` | Default MinIO        | Variable nodes        | Variable resources  |
+| Config File                        | Description          | Nodes                 | Resources           |
+| ---------------------------------- | -------------------- | --------------------- | ------------------- |
+| `ansible/vars/dev-small.yml`       | Small dev cluster    | 1 control + 1 worker  | 2 CPU, 2GB RAM each |
+| `ansible/vars/prod-large.yml`      | Large prod cluster   | 3 control + 4 workers | 4 CPU, 8GB RAM each |
+| `ansible/vars/baremetal-simple.yml`| Simple MinIO storage | 4 storage nodes       | 2 CPU, 4GB RAM each |
+| `ansible/vars/cluster_config.yml`  | Default Kubernetes   | 1 control + 2 workers | Variable resources  |
+| `ansible/vars/baremetal_config.yml`| Default MinIO        | Variable nodes        | Variable resources  |
 
 ## Usage
 
@@ -112,45 +116,61 @@ The project includes several pre-configured cluster templates:
 
 ```bash
 # Development cluster
-make full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh --config ansible/vars/dev-small.yml --name dev
 
-# Production cluster
-make full-setup CONFIG_FILE=vars/prod-large.yml CLUSTER_NAME=production
+# Production cluster  
+./scripts/deploy-cluster.sh --config ansible/vars/prod-large.yml --name production
 
 # Bare-metal storage cluster
-make full-setup CONFIG_FILE=vars/baremetal-simple.yml CLUSTER_NAME=storage
+./scripts/deploy-cluster.sh --config ansible/vars/baremetal-simple.yml --name storage
+
+# Interactive deployment (recommended)
+./scripts/interactive-setup.sh
 ```
 
 ### Step-by-step Deployment
 
 ```bash
 # 1. Validate configuration
-make validate CONFIG_FILE=vars/dev-small.yml
+./scripts/deploy-cluster.sh validate --config ansible/vars/dev-small.yml --name dev
 
 # 2. Create storage disks
-make create-disks CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh create-disks --config ansible/vars/dev-small.yml --name dev
 
 # 3. Provision VMs
-make provision CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh provision --config ansible/vars/dev-small.yml --name dev
 
 # 4. Configure VMs
-make configure CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh configure --name dev
 
 # 5. Mount storage disks
-make mount-disks CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh mount-disks --name dev
 
 # 6. Deploy applications
-make deploy CLUSTER_NAME=dev
+./scripts/deploy-cluster.sh deploy --name dev
 ```
 
 ### Management Commands
 
 ```bash
-make status              # Show VM status
-make show-config         # Show current configuration
-make list-disks         # List Lima disks
-make destroy CLUSTER_NAME=dev  # Destroy cluster
-make help               # Show all available commands
+# Show all clusters
+./scripts/manage-cluster.sh list
+
+# Show cluster status
+./scripts/manage-cluster.sh status dev
+
+# SSH into a VM
+./scripts/manage-cluster.sh ssh dev control-plane-01
+
+# Show VM logs
+./scripts/manage-cluster.sh logs dev worker-01
+
+# Destroy cluster
+./scripts/deploy-cluster.sh destroy --name dev
+
+# Get help
+./scripts/deploy-cluster.sh --help
+./scripts/manage-cluster.sh --help
 ```
 
 ## Features
@@ -230,7 +250,7 @@ kubernetes_cluster:
 1. Deploy with your custom configuration:
 
 ```bash
-make full-setup CONFIG_FILE=vars/my-custom.yml CLUSTER_NAME=custom
+./scripts/deploy-cluster.sh --config ansible/vars/my-custom.yml --name custom
 ```
 
 ### Node Configuration Options
@@ -283,30 +303,30 @@ limactl list
 limactl shell CLUSTER_NAME-node-name
 
 # Regenerate inventory
-make inventory CLUSTER_NAME=your-cluster
+./scripts/deploy-cluster.sh provision --config CONFIG_FILE --name your-cluster
 ```
 
 #### Disk Mounting Problems
 
 ```bash
 # Check disk status
-make list-disks
+limactl disk ls
 
 # Verify disk creation
 limactl disk ls
 
 # Re-run disk mounting
-make mount-disks CLUSTER_NAME=your-cluster
+./scripts/deploy-cluster.sh mount-disks --name your-cluster
 ```
 
 #### Ansible Playbook Errors
 
 ```bash
 # Check syntax
-make syntax-check
+ansible-playbook --syntax-check ansible/playbooks/infrastructure/provision_vms.yml
 
 # Run in dry-run mode
-make dry-run CONFIG_FILE=vars/dev-small.yml
+./scripts/deploy-cluster.sh --dry-run --config ansible/vars/dev-small.yml --name test
 
 # Increase verbosity
 ansible-playbook -vvv playbooks/infrastructure/provision_vms.yml
@@ -355,14 +375,14 @@ ansible-playbook -vvv playbooks/infrastructure/provision_vms.yml
 
 ```bash
 # Syntax validation
-make syntax-check
+ansible-playbook --syntax-check ansible/playbooks/infrastructure/provision_vms.yml
 
 # Dry run (safe testing)
-make dry-run CONFIG_FILE=vars/dev-small.yml
+./scripts/deploy-cluster.sh --dry-run --config ansible/vars/dev-small.yml --name test
 
 # Full test with cleanup
-make full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=test
-make destroy CLUSTER_NAME=test
+./scripts/deploy-cluster.sh --config ansible/vars/dev-small.yml --name test
+./scripts/deploy-cluster.sh destroy --name test
 ```
 
 ## License

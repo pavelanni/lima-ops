@@ -246,6 +246,33 @@ limactl shell <vm-name>
 - Kubernetes API port forwarding for control plane nodes
 - Configuration centralized in vars/ directory
 
+### Troubleshooting
+
+**Lima Disk Resize Error ("diffDisk: Shrinking is currently unavailable")**
+
+This error occurs when there's a disk size mismatch between your configuration file and existing Lima VMs. Lima doesn't support disk resizing, so the sizes must match exactly.
+
+**Root Cause:** Configuration file specifies different disk size than existing VM
+- Example: Config says `disk_size: "8GiB"` but existing VM has 10GiB
+
+**Solution:** The new shell scripts automatically detect and prevent this issue:
+
+```bash
+# The validation will show:
+ERROR: Disk size mismatch for VM 'dev-worker-01':
+  Configuration file: 8GiB  
+  Existing VM: 10GiB
+
+Lima does not support disk resizing. Please either:
+1. Update the configuration file to match existing VM: disk_size: "10GiB"
+2. Destroy the existing VM and recreate: ./scripts/deploy-cluster.sh destroy --name dev
+```
+
+**Prevention:** Always run validation before deployment:
+```bash
+./scripts/deploy-cluster.sh validate --config CONFIG_FILE --name CLUSTER_NAME
+```
+
 ### AIStor License Requirements
 
 **IMPORTANT**: AIStor (Commercial MinIO) requires a valid SUBNET license.
@@ -278,9 +305,12 @@ Without a valid license, the AIStor operator installation will fail.
 - **Disk management safety**: Disk operations are properly handled in check mode
 - **Configuration validation**: `make validate` checks requirements before deployment
 
-## Current Status (Last updated: 2025-07-12)
+## Current Status (Last updated: 2025-08-08)
 
 ✅ **Complete:**
+- **Shell Script Migration**: Converted from Makefile-based to user-friendly shell scripts
+- **Interactive Setup**: Added wizard-based deployment with comprehensive error handling
+- **Disk Size Validation**: Added validation to prevent Lima disk resize conflicts
 - Infrastructure provisioning and VM creation
 - Lima VM disk mounting issues resolved (switched to raw format)
 - Cluster-node naming convention and override functionality
@@ -289,20 +319,34 @@ Without a valid license, the AIStor operator installation will fail.
 - Comprehensive disk mounting strategy implemented
 - Project reorganization following Ansible best practices
 
-✅ **Recent Additions:**
-- Created `tasks/mount_additional_disks.yml` for smart disk detection (excludes vda and cidata)
-- Created `tasks/process_single_disk.yml` for complete disk lifecycle management
-- Created `playbooks/configuration/mount_disks.yml` playbook
-- Added `make mount-disks` command to Makefile
-- Updated `full-setup` workflow to include disk mounting
-- Implemented comprehensive disk management: unmount → clean → reformat → remount
-- Based on user's proven shell script approach with full Lima integration
+✅ **Recent Additions (August 2025):**
+- **Shell Script Automation**: Complete replacement of Makefiles with intuitive scripts
+  - `scripts/deploy-cluster.sh` - Main orchestration with step-by-step or full workflows
+  - `scripts/interactive-setup.sh` - Interactive wizard for guided deployment
+  - `scripts/manage-cluster.sh` - Cluster management utilities (status, SSH, logs, cleanup)
+  - `scripts/lib/` - Shared utilities with error handling, validation, and configuration management
 
-🔄 **Next Steps:**
-- ✅ Disk mounting tested and working perfectly on lab cluster
-- Proceed with MinIO or Kubernetes installation
-- Deploy application layer (K8s/AIStor or bare-metal MinIO)
+- **Disk Size Validation**: Prevents Lima resize errors by validating config vs existing VMs
+  - Detects disk size mismatches between configuration files and existing Lima VMs
+  - Provides clear error messages with actionable solutions
+  - Prevents the common "diffDisk: Shrinking is currently unavailable" Lima error
+  - Example: If config specifies 8GiB but existing VM has 10GiB, shows fix options
+
+- **Enhanced User Experience**:
+  - Rich colored output with progress indicators
+  - Pre-deployment validation with system requirements checking
+  - Comprehensive error handling with helpful suggestions
+  - Dry-run mode for safe testing
+  - Built-in cluster management with status, logs, and SSH access
+
+🔄 **Migration Notes:**
+- **Old Makefile commands replaced:**
+  - `make full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev`
+  - **New:** `./scripts/deploy-cluster.sh --config ansible/vars/dev-small.yml --name dev`
+  - **Or:** `./scripts/interactive-setup.sh` (recommended)
+- All previous functionality preserved with improved usability
+- Updated documentation reflects new shell script approach
 
 **Available Clusters:**
-- lab cluster (lab-control-plane-01, lab-worker-01, lab-worker-02)
-- SSH access via Lima SSH config files with dynamic user detection
+- dev cluster (dev-control-plane-01, dev-worker-01) - Running
+- SSH access via `./scripts/manage-cluster.sh ssh CLUSTER VM`

@@ -1,0 +1,99 @@
+# vars/prod-large.yml
+---
+# Large production cluster configuration
+deployment:
+  type: "kubernetes"
+
+# MinIO configuration
+minio:
+  version: "latest"
+  console_port: 9001
+  api_port: 9000
+  root_user: "minioadmin"
+  root_password: "prod-secret-123"
+
+# AIStor configuration
+aistor:
+  license: "" # REQUIRED: Set your SUBNET license here
+  operator_namespace: "aistor"
+  objectstore_name: "dev-object-store"
+  objectstore_namespace: "dev-object-store"
+  storage_class: "directpv-min-io"
+  service_type: "NodePort"
+
+# Kubernetes cluster configuration
+kubernetes_cluster:
+  name: "dev-large"
+  version: "1.32"
+  pod_cidr: "10.42.0.0/16"
+  service_cidr: "10.43.0.0/16"
+
+  nodes:
+  # Control plane node
+  - name: "control-plane-01"
+    role: "control-plane"
+    cpus: 4
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks: []
+
+  # Worker nodes with 4 disks 10GiB each
+  - name: "worker-01"
+    role: "worker"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "10GiB"
+    - name: "disk2"
+      size: "10GiB"
+    - name: "disk3"
+      size: "10GiB"
+    - name: "disk4"
+      size: "10GiB"
+
+  - name: "worker-02"
+    role: "worker"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "10GiB"
+    - name: "disk2"
+      size: "10GiB"
+    - name: "disk3"
+      size: "10GiB"
+    - name: "disk4"
+      size: "10GiB"
+
+  - name: "worker-03"
+    role: "worker"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "10GiB"
+    - name: "disk2"
+      size: "10GiB"
+    - name: "disk3"
+      size: "10GiB"
+    - name: "disk4"
+      size: "10GiB"
+
+  - name: "worker-04"
+    role: "worker"
+    cpus: 2
+    memory: "4GiB"
+    disk_size: "10GiB"
+    additional_disks:
+    - name: "disk1"
+      size: "10GiB"
+    - name: "disk2"
+      size: "10GiB"
+    - name: "disk3"
+      size: "10GiB"
+    - name: "disk4"
+      size: "10GiB"

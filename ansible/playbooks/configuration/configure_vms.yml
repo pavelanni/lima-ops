@@ -5,7 +5,7 @@
   become: yes
   
   vars_files:
-    - ../../vars/cluster_config.yml
+    - "../../{{ config_file | default('vars/cluster_config.yml') }}"
   
   tasks:
     - name: Update package cache
@@ -24,14 +24,17 @@
           - lsof
         state: present
     
-    - name: Configure additional disks
+    - name: Configure additional disks (bare-metal only)
       ansible.builtin.include_tasks: ../../tasks/configure_disks.yml
       loop: "{{ additional_disks | default([]) }}"
       loop_control:
         loop_var: disk_item
-      when: additional_disks is defined and additional_disks | length > 0
+      when: 
+        - deployment.type == "baremetal"
+        - additional_disks is defined 
+        - additional_disks | length > 0
     
-    - name: Create directories for MinIO data
+    - name: Create directories for MinIO data (bare-metal only)
       ansible.builtin.file:
         path: "/mnt/{{ item.name }}/minio"
         state: directory
@@ -40,11 +43,16 @@
         group: root
       loop: "{{ additional_disks | default([]) }}"
       when: 
+        - deployment.type == "baremetal"
         - additional_disks is defined
         - additional_disks | length > 0
         - "'data' in item.name"
     
-    - name: Display disk configuration
+    - name: Display disk configuration status
       ansible.builtin.debug:
-        msg: "Configured {{ additional_disks | length }} additional disk(s) on {{ inventory_hostname }}"
-      when: additional_disks is defined
+        msg: >-
+          {% if deployment.type == "baremetal" %}
+          Configured {{ additional_disks | default([]) | length }} additional disk(s) on {{ inventory_hostname }} (bare-metal mode)
+          {% else %}
+          Skipped disk configuration on {{ inventory_hostname }} ({{ deployment.type }} mode - disks left raw for DirectPV)
+          {% endif %}
