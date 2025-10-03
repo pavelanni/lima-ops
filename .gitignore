@@ -52,6 +52,11 @@ ehthumbs.db
 *.pem
 *.key
 
+# Kubeconfig files (contain certificates and keys)
+kubeconfig*
+*kubeconfig*
+*.kubeconfig
+
 # Local configuration overrides
 local_config.yml
 override.yml
