@@ -67,38 +67,42 @@
   hosts: "{{ target_cluster }}_control_plane[0]"
   gather_facts: yes
   become: no
-  
+
   vars_files:
     - ../../vars/cluster_config.yml
-  
+
+  vars:
+    kube_config_dir: "/home/{{ ansible_user }}/.kube"
+    kube_config_file: "/home/{{ ansible_user }}/.kube/config"
+
   tasks:
     - name: Create .kube directory
       ansible.builtin.file:
-        path: "{{ ansible_env.HOME }}/.kube"
+        path: "{{ kube_config_dir }}"
         state: directory
         mode: '0755'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-    
+
     - name: Copy kubeconfig
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
-        dest: "{{ ansible_env.HOME }}/.kube/config"
+        dest: "{{ kube_config_file }}"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         mode: '0600'
         remote_src: yes
       become: yes
-    
+
     - name: Update kubeconfig server address
       ansible.builtin.replace:
-        path: "{{ ansible_env.HOME }}/.kube/config"
+        path: "{{ kube_config_file }}"
         regexp: 'https://127\.0\.0\.1:6443'
         replace: "https://{{ ansible_default_ipv4.address }}:6443"
-    
+
     - name: Fetch kubeconfig to local machine
       ansible.builtin.fetch:
-        src: "{{ ansible_env.HOME }}/.kube/config"
+        src: "{{ kube_config_file }}"
         dest: "./kubeconfig-{{ kubernetes_cluster.name }}"
         flat: yes
 
