@@ -3,11 +3,15 @@
   hosts: "{{ target_cluster }}_control_plane"
   gather_facts: yes
   become: yes
-  
+
   vars_files:
     - ../../vars/cluster_config.yml
-  
+
   tasks:
+    - name: Override cluster name if specified
+      ansible.builtin.set_fact:
+        kubernetes_cluster: "{{ kubernetes_cluster | combine({'name': cluster_name_override}) }}"
+      when: cluster_name_override is defined
     - name: Download K3s install script
       ansible.builtin.get_url:
         url: https://get.k3s.io
@@ -171,6 +175,11 @@
     - ../../vars/cluster_config.yml
 
   tasks:
+    - name: Override cluster name if specified
+      ansible.builtin.set_fact:
+        kubernetes_cluster: "{{ kubernetes_cluster | combine({'name': cluster_name_override}) }}"
+      when: cluster_name_override is defined
+
     - name: Show kubeconfig location
       ansible.builtin.debug:
         msg: |
