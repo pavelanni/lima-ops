@@ -128,11 +128,18 @@ run_ansible_playbook() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --config)
-                # Strip 'ansible/' prefix if present since playbooks run from ansible/ directory
+                # Make config path relative to ansible/ directory
                 local config_path="$2"
-                if [[ "$config_path" =~ ^ansible/ ]]; then
+
+                # If absolute path, make it relative to ansible/ directory
+                if [[ "$config_path" = /* ]]; then
+                    # Remove PROJECT_ROOT/ansible/ prefix if present
+                    config_path="${config_path#$PROJECT_ROOT/ansible/}"
+                elif [[ "$config_path" =~ ^ansible/ ]]; then
+                    # Remove ansible/ prefix for relative paths
                     config_path="${config_path#ansible/}"
                 fi
+
                 extra_vars+=("-e" "config_file=$config_path")
                 shift 2
                 ;;
@@ -150,9 +157,9 @@ run_ansible_playbook() {
                 ;;
         esac
     done
-    
+
     debug "Running playbook: $playbook with vars: ${extra_vars[*]}"
-    
+
     cd "$PROJECT_ROOT/ansible" || error "Failed to change to ansible directory"
     ansible-playbook "$playbook" "${extra_vars[@]}"
 }
