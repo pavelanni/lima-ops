@@ -2,6 +2,8 @@
 
 # Configuration file management for lima-ops scripts
 
+set -euo pipefail
+
 # Common functions are sourced by main script
 
 # Default configuration files

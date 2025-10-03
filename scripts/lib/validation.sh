@@ -2,6 +2,8 @@
 
 # Validation functions for lima-ops scripts
 
+set -euo pipefail
+
 # Common functions are sourced by main script
 
 # Check system requirements
@@ -82,7 +84,7 @@ check_existing_resources() {
     
     if [[ -n "$existing_vms" ]]; then
         warn "Found existing VMs for cluster '$cluster_name':"
-        echo "$existing_vms" | sed 's/^/    /'
+        echo "${existing_vms//$'\n'/$'\n'    }"
         echo
         
         if confirm "Do you want to continue? This may cause conflicts." "n"; then
@@ -98,7 +100,7 @@ check_existing_resources() {
     
     if [[ -n "$existing_disks" ]]; then
         warn "Found existing disks for cluster '$cluster_name':"
-        echo "$existing_disks" | sed 's/^/    /'
+        echo "${existing_disks//$'\n'/$'\n'    }"
         echo
         
         if confirm "Do you want to continue? Existing disks will be reused." "y"; then
@@ -231,9 +233,9 @@ check_system_resources() {
         
         # Convert memory to GB (simplified)
         if [[ "$memory" =~ ([0-9]+)GiB ]]; then
-            total_memory_gb=$((total_memory_gb + ${BASH_REMATCH[1]}))
+            total_memory_gb=$((total_memory_gb + BASH_REMATCH[1]))
         elif [[ "$memory" =~ ([0-9]+)MB ]]; then
-            total_memory_gb=$((total_memory_gb + ${BASH_REMATCH[1]} / 1024))
+            total_memory_gb=$((total_memory_gb + BASH_REMATCH[1] / 1024))
         fi
     done
     

@@ -3,6 +3,8 @@
 # Common utility functions for lima-ops scripts
 # Based on proven patterns from legacy scripts
 
+set -euo pipefail
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -13,12 +15,12 @@ NC='\033[0m' # No Color
 
 # Script directory detection
 get_script_dir() {
-    echo "$(cd "$(dirname "${BASH_SOURCE[1]}")" && pwd)"
+    cd "$(dirname "${BASH_SOURCE[1]}")" && pwd
 }
 
 # Get project root (assuming scripts are in scripts/ subdirectory)
 get_project_root() {
-    echo "$(cd "$(dirname "${BASH_SOURCE[1]}")/.." && pwd)"
+    cd "$(dirname "${BASH_SOURCE[1]}")/.." && pwd
 }
 
 # Logging functions with colors and timestamps
@@ -51,7 +53,7 @@ show_progress() {
     local delay="${2:-0.5}"
     
     echo -n "$message"
-    for i in {1..3}; do
+    for _ in {1..3}; do
         sleep "$delay"
         echo -n "."
     done
