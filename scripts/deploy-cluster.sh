@@ -97,10 +97,14 @@ parse_args() {
         case $1 in
             -c|--config)
                 CONFIG_FILE="$2"
+                # Convert to absolute path if relative
+                if [[ ! "$CONFIG_FILE" = /* ]]; then
+                    CONFIG_FILE="$PROJECT_ROOT/$CONFIG_FILE"
+                fi
                 shift 2
                 ;;
             -n|--name)
-                CLUSTER_NAME="$2"  
+                CLUSTER_NAME="$2"
                 shift 2
                 ;;
             -f|--force)
