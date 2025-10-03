@@ -6,7 +6,9 @@ interactive setup wizards, and rich cluster management capabilities. Supports
 Kubernetes-based deployments and bare-metal MinIO clusters with enterprise-grade
 storage solutions.
 
-> **✨ New!** This project now uses intuitive shell scripts instead of Makefiles for better user experience, error handling, and flexibility. All previous functionality is preserved with improved usability.
+> **✨ New!** This project now uses intuitive shell scripts instead of Makefiles for better user
+> experience, error handling, and flexibility. All previous functionality is preserved with improved
+> usability.
 
 ## Overview
 
