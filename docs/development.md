@@ -81,84 +81,68 @@ The project uses a declarative configuration approach with multiple configuratio
 
 ## Common Commands
 
-### Using the Makefile (Recommended)
+### Using Shell Scripts (Recommended)
 
-**Choose Your Deployment:**
+**Interactive Setup:**
 
 ```bash
-make choose-deployment    # Interactive guide to deployment options
+./scripts/interactive-setup.sh    # Guided setup wizard
 ```
 
 **Complete Workflows:**
 
 ```bash
 # Using specific configuration files (deployment type defined in config)
-make full-setup CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
-make full-setup CONFIG_FILE=vars/prod-large.yml CLUSTER_NAME=production
-make full-setup CONFIG_FILE=vars/baremetal-simple.yml CLUSTER_NAME=storage
+./scripts/deploy-cluster.sh --config ansible/vars/dev-small.yml --name dev
+./scripts/deploy-cluster.sh --config ansible/vars/prod-large.yml --name production
+./scripts/deploy-cluster.sh --config ansible/vars/baremetal-simple.yml --name storage
 
 # Using default configuration
-make full-setup CLUSTER_NAME=my-cluster  # Uses vars/cluster_config.yml
-
-# Infrastructure only
-make provision configure CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=my-cluster
+./scripts/deploy-cluster.sh --config ansible/vars/cluster_config.yml --name mycluster
 ```
 
 **Step-by-step Workflow:**
 
 ```bash
 # With specific config file
-make validate CONFIG_FILE=vars/dev-small.yml
-make create-disks CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
-make provision CONFIG_FILE=vars/dev-small.yml CLUSTER_NAME=dev
-make configure CLUSTER_NAME=dev
-make mount-disks CLUSTER_NAME=dev
-make deploy CLUSTER_NAME=dev
-
-# Using default config
-make validate
-make create-disks CLUSTER_NAME=my-cluster
-make provision CLUSTER_NAME=my-cluster
-make configure CLUSTER_NAME=my-cluster
-make mount-disks CLUSTER_NAME=my-cluster
-make deploy CLUSTER_NAME=my-cluster
-```
-
-**Application-specific Deployment:**
-
-```bash
-make deploy-baremetal     # Deploy bare-metal MinIO
-make deploy-kubernetes    # Deploy Kubernetes apps
+./scripts/deploy-cluster.sh validate --config ansible/vars/dev-small.yml --name dev
+./scripts/deploy-cluster.sh create-disks --config ansible/vars/dev-small.yml --name dev
+./scripts/deploy-cluster.sh provision --config ansible/vars/dev-small.yml --name dev
+./scripts/deploy-cluster.sh configure --name dev
+./scripts/deploy-cluster.sh mount-disks --name dev
+./scripts/deploy-cluster.sh deploy --name dev
 ```
 
 **Management Commands:**
 
 ```bash
-make status          # Check VM status
-make list-disks      # List Lima disks
-make mount-disks     # Mount additional disks on VMs
-make show-config     # Show current configuration
-make destroy         # Destroy cluster
-make help            # Show all available commands
+./scripts/manage-cluster.sh list              # List all clusters
+./scripts/manage-cluster.sh status CLUSTER    # Check cluster status
+./scripts/manage-cluster.sh ssh CLUSTER NODE  # SSH into a VM
+./scripts/manage-cluster.sh logs CLUSTER NODE # Show VM logs
+./scripts/manage-cluster.sh destroy CLUSTER   # Destroy cluster
+./scripts/manage-cluster.sh cleanup           # Clean up orphaned resources
 ```
 
 ### Manual Ansible Commands
 
 ```bash
 # Provision VMs and generate inventory
-ansible-playbook provision_vms.yml
+ansible-playbook ansible/playbooks/infrastructure/provision_vms.yml \
+  -e config_file=ansible/vars/dev-small.yml -e cluster_name=dev
 
 # Configure VMs using generated inventory
-ansible-playbook -i inventory/demo-k8s.ini configure_vms.yml
+ansible-playbook -i inventory/dev.ini ansible/playbooks/configuration/configure_vms.yml
 
 # Generate inventory without provisioning
-ansible-playbook generate_inventory.yml
+ansible-playbook ansible/playbooks/configuration/generate_inventory.yml \
+  -e config_file=ansible/vars/dev-small.yml -e cluster_name=dev
 
 # Syntax checking
-make syntax-check
+ansible-playbook --syntax-check ansible/playbooks/infrastructure/provision_vms.yml
 
 # Safe dry-run (won't create VMs)
-make dry-run
+./scripts/deploy-cluster.sh --dry-run --config ansible/vars/dev-small.yml --name dev
 ```
 
 ### Lima VM Management
@@ -273,14 +257,17 @@ Without a valid license, the AIStor operator installation will fail.
 
 ### Safety Features
 
-- **Check mode protection**: `make dry-run` safely shows what would happen without creating VMs
+- **Check mode protection**: `--dry-run` safely shows what would happen without creating VMs
 - **Shell command protection**: Lima commands are skipped in check mode to prevent accidental VM creation
 - **Disk management safety**: Disk operations are properly handled in check mode
-- **Configuration validation**: `make validate` checks requirements before deployment
+- **Configuration validation**: Pre-deployment validation checks requirements before deployment
 
-## Current Status (Last updated: 2025-07-12)
+## Current Status (Last updated: 2025-10-02)
 
 ✅ **Complete:**
+- **Shell Script Migration**: Converted from Makefile-based to user-friendly shell scripts (August 2025)
+- **Interactive Setup**: Added wizard-based deployment with comprehensive error handling
+- **Disk Size Validation**: Added validation to prevent Lima disk resize conflicts
 - Infrastructure provisioning and VM creation
 - Lima VM disk mounting issues resolved (switched to raw format)
 - Cluster-node naming convention and override functionality
@@ -288,21 +275,25 @@ Without a valid license, the AIStor operator installation will fail.
 - Dynamic user detection for portable Ansible execution
 - Comprehensive disk mounting strategy implemented
 - Project reorganization following Ansible best practices
+- Constitution-based governance model (v1.0.0)
 
-✅ **Recent Additions:**
-- Created `tasks/mount_additional_disks.yml` for smart disk detection (excludes vda and cidata)
-- Created `tasks/process_single_disk.yml` for complete disk lifecycle management
-- Created `playbooks/configuration/mount_disks.yml` playbook
-- Added `make mount-disks` command to Makefile
-- Updated `full-setup` workflow to include disk mounting
-- Implemented comprehensive disk management: unmount → clean → reformat → remount
-- Based on user's proven shell script approach with full Lima integration
+✅ **Recent Additions (October 2025):**
+- **Project Constitution**: Established six core principles for governance
+  - Declarative Configuration
+  - Validation-First Deployment
+  - Separation of Concerns
+  - Safe Automation
+  - Shell Script Simplicity
+  - Idempotent Operations
 
-🔄 **Next Steps:**
-- ✅ Disk mounting tested and working perfectly on lab cluster
-- Proceed with MinIO or Kubernetes installation 
-- Deploy application layer (K8s/AIStor or bare-metal MinIO)
+✅ **Shell Script Features:**
+- `scripts/deploy-cluster.sh` - Main orchestration with step-by-step or full workflows
+- `scripts/interactive-setup.sh` - Interactive wizard for guided deployment
+- `scripts/manage-cluster.sh` - Cluster management utilities (status, SSH, logs, cleanup)
+- `scripts/lib/` - Shared utilities with error handling, validation, and configuration management
 
-**Available Clusters:**
-- lab cluster (lab-control-plane-01, lab-worker-01, lab-worker-02)
-- SSH access via Lima SSH config files with dynamic user detection
+🎯 **Ready for Production Use:**
+- All core features implemented and tested
+- Comprehensive documentation for both users and developers
+- Safe automation with validation and error handling
+- Support for both Kubernetes and bare-metal MinIO deployments
