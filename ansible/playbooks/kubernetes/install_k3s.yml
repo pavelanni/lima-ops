@@ -87,6 +87,8 @@
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
         dest: "{{ user_home.stdout }}/.kube/config"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         mode: '0600'
         remote_src: yes
       become: yes
@@ -96,13 +98,6 @@
         path: "{{ user_home.stdout }}/.kube/config"
         regexp: 'https://127\.0\.0\.1:6443'
         replace: "https://{{ ansible_default_ipv4.address }}:6443"
-
-    - name: Set kubeconfig ownership
-      ansible.builtin.file:
-        path: "{{ user_home.stdout }}/.kube/config"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
-      become: yes
 
     - name: Fetch kubeconfig to local machine
       ansible.builtin.fetch:
