@@ -98,7 +98,7 @@
         remote_src: yes
       become: yes
 
-    - name: Update kubeconfig server address
+    - name: Update kubeconfig server address for VM use
       ansible.builtin.replace:
         path: "{{ user_home.stdout }}/.kube/config"
         regexp: 'https://127\.0\.0\.1:6443'
@@ -108,6 +108,25 @@
       ansible.builtin.fetch:
         src: "{{ user_home.stdout }}/.kube/config"
         dest: "./kubeconfig-{{ kubernetes_cluster.name }}"
+        flat: yes
+
+    - name: Create host-accessible kubeconfig
+      ansible.builtin.copy:
+        src: "{{ user_home.stdout }}/.kube/config"
+        dest: "{{ user_home.stdout }}/.kube/config-host"
+        remote_src: yes
+        mode: '0600'
+
+    - name: Update kubeconfig server address for host access
+      ansible.builtin.replace:
+        path: "{{ user_home.stdout }}/.kube/config-host"
+        regexp: 'https://.*:6443'
+        replace: "https://127.0.0.1:6443"
+
+    - name: Fetch host-accessible kubeconfig
+      ansible.builtin.fetch:
+        src: "{{ user_home.stdout }}/.kube/config-host"
+        dest: "{{ playbook_dir }}/../../../kubeconfig-{{ kubernetes_cluster.name }}.yaml"
         flat: yes
 
 - name: Label nodes for storage
@@ -143,3 +162,33 @@
       failed_when:
         - taint_result.rc != 0
         - "'already has a taint' not in taint_result.stderr"
+
+- name: Display kubeconfig information
+  hosts: localhost
+  gather_facts: no
+
+  vars_files:
+    - ../../vars/cluster_config.yml
+
+  tasks:
+    - name: Show kubeconfig location
+      ansible.builtin.debug:
+        msg: |
+
+          ========================================
+          K3s Installation Complete!
+          ========================================
+
+          Kubeconfig files have been created:
+
+          1. For host access (recommended):
+             {{ playbook_dir }}/../../../kubeconfig-{{ kubernetes_cluster.name }}.yaml
+
+             To use from your host machine:
+             export KUBECONFIG={{ playbook_dir }}/../../../kubeconfig-{{ kubernetes_cluster.name }}.yaml
+             kubectl get nodes
+
+          2. For VM access:
+             SSH into control plane and use: kubectl get nodes
+
+          ========================================
