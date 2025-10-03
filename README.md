@@ -175,6 +175,31 @@ The project includes several pre-configured cluster templates:
 ./scripts/manage-cluster.sh --help
 ```
 
+### Accessing Kubernetes Clusters
+
+For Kubernetes deployments, a kubeconfig file is automatically generated at:
+
+```bash
+kubeconfig-{cluster_name}.yaml
+```
+
+Use it to access your cluster from the host machine:
+
+```bash
+export KUBECONFIG=/path/to/lima-ops/kubeconfig-dev.yaml
+kubectl get nodes
+kubectl get pods -A
+```
+
+**Security Note:** Kubeconfig files contain certificates and private keys. They are:
+
+- Automatically excluded from git commits (`.gitignore`)
+- Should never be shared or committed to version control
+- Generated fresh for each cluster deployment
+- Specific to your local machine
+
+For production or cloud deployments, ensure kubeconfig files are managed securely and never exposed in repositories.
+
 ## Features
 
 ### Infrastructure Management
