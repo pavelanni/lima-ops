@@ -72,6 +72,11 @@
     - ../../vars/cluster_config.yml
 
   tasks:
+    - name: Get current user
+      ansible.builtin.shell: whoami
+      register: current_user
+      changed_when: false
+
     - name: Get user home directory
       ansible.builtin.shell: echo $HOME
       register: user_home
@@ -87,8 +92,8 @@
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
         dest: "{{ user_home.stdout }}/.kube/config"
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        owner: "{{ current_user.stdout }}"
+        group: "{{ current_user.stdout }}"
         mode: '0600'
         remote_src: yes
       become: yes
@@ -112,24 +117,29 @@
   
   vars_files:
     - ../../vars/cluster_config.yml
-  
+
   tasks:
+    - name: Get user home directory
+      ansible.builtin.shell: echo $HOME
+      register: user_home
+      changed_when: false
+
     - name: Label worker nodes for DirectPV
       ansible.builtin.shell: |
-        kubectl label node {{ item }} directpv=yes --overwrite
+        kubectl label node {{ hostvars[item].ansible_host }} directpv=yes --overwrite
       loop: "{{ groups[target_cluster + '_workers'] }}"
       environment:
-        KUBECONFIG: "{{ ansible_user_dir }}/.kube/config"
+        KUBECONFIG: "{{ user_home.stdout }}/.kube/config"
       register: label_result
       changed_when: "'labeled' in label_result.stdout"
-    
+
     - name: Taint control plane node
       ansible.builtin.shell: |
-        kubectl taint node {{ inventory_hostname }} node-role.kubernetes.io/control-plane:NoSchedule --overwrite
+        kubectl taint node {{ hostvars[inventory_hostname].ansible_host }} node-role.kubernetes.io/control-plane:NoSchedule --overwrite
       environment:
-        KUBECONFIG: "{{ ansible_user_dir }}/.kube/config"
+        KUBECONFIG: "{{ user_home.stdout }}/.kube/config"
       register: taint_result
       changed_when: "'tainted' in taint_result.stdout or 'updated' in taint_result.stdout"
-      failed_when: 
+      failed_when:
         - taint_result.rc != 0
         - "'already has a taint' not in taint_result.stderr"
