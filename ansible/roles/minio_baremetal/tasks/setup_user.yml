@@ -23,6 +23,7 @@
     group: "{{ minio_group }}"
     mode: '0755'
   loop:
+    - "{{ minio_home }}"
     - "{{ minio_home }}/bin"
     - "{{ minio_home }}/etc"
     - "{{ minio_home }}/logs"
