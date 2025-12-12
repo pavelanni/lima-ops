@@ -1,0 +1,93 @@
+---
+# Configure a single disk based on inventory definition
+# disk_item comes from the loop, disk_index is the 0-based index
+
+- name: Set target disk device for {{ disk_item.name }}
+  ansible.builtin.set_fact:
+    # Map disk index to device: 0->vdb, 1->vdc, 2->vdd, etc.
+    target_disk: "/dev/vd{{ 'bcdefghijklmnopqrstuvwxyz'[disk_index] }}"
+
+- name: Check if target disk exists
+  ansible.builtin.stat:
+    path: "{{ target_disk }}"
+  register: disk_exists
+
+- name: Skip if disk does not exist
+  ansible.builtin.debug:
+    msg: "Disk {{ target_disk }} does not exist for {{ disk_item.name }} - skipping"
+  when: not disk_exists.stat.exists
+
+- name: Check if disk is cidata (cloud-init)
+  ansible.builtin.shell: |
+    blkid {{ target_disk }} 2>/dev/null | grep -q 'LABEL="cidata"' && echo "cidata" || echo "ok"
+  register: disk_label
+  changed_when: false
+  failed_when: false
+  when: disk_exists.stat.exists
+
+- name: Skip cidata disk
+  ansible.builtin.debug:
+    msg: "Disk {{ target_disk }} is cloud-init data disk - skipping"
+  when: disk_exists.stat.exists and disk_label.stdout == "cidata"
+
+- name: Process disk {{ target_disk }} for {{ disk_item.name }}
+  when:
+    - disk_exists.stat.exists
+    - disk_label.stdout | default('ok') == "ok"
+  block:
+    - name: Check if disk already has partitions
+      ansible.builtin.shell: |
+        lsblk -no NAME {{ target_disk }} | tail -n +2
+      register: existing_partitions
+      changed_when: false
+
+    - name: Create GPT partition table on {{ target_disk }}
+      community.general.parted:
+        device: "{{ target_disk }}"
+        label: gpt
+        state: present
+      when: existing_partitions.stdout_lines | length == 0
+
+    - name: Create primary partition on {{ target_disk }}
+      community.general.parted:
+        device: "{{ target_disk }}"
+        number: 1
+        state: present
+        part_type: primary
+        fs_type: "{{ disk_filesystem }}"
+        part_start: "1MiB"
+        part_end: "100%"
+      when: existing_partitions.stdout_lines | length == 0
+
+    - name: Format partition as {{ disk_filesystem | upper }}
+      community.general.filesystem:
+        fstype: "{{ disk_filesystem }}"
+        dev: "{{ target_disk }}1"
+        force: false
+      when: existing_partitions.stdout_lines | length == 0
+
+    - name: Create mount point /mnt/{{ disk_item.name }}
+      ansible.builtin.file:
+        path: "{{ mount_base }}/{{ disk_item.name }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount {{ target_disk }}1 to /mnt/{{ disk_item.name }}
+      ansible.posix.mount:
+        src: "{{ target_disk }}1"
+        path: "{{ mount_base }}/{{ disk_item.name }}"
+        fstype: "{{ disk_filesystem }}"
+        opts: defaults
+        state: mounted
+
+    - name: Ensure fstab entry for {{ target_disk }}1
+      ansible.posix.mount:
+        src: "{{ target_disk }}1"
+        path: "{{ mount_base }}/{{ disk_item.name }}"
+        fstype: "{{ disk_filesystem }}"
+        opts: defaults
+        state: present
+
+    - name: Display mount result
+      ansible.builtin.debug:
+        msg: "Mounted {{ target_disk }}1 -> /mnt/{{ disk_item.name }}"

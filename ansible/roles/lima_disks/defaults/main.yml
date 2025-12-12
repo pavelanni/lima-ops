@@ -1,0 +1,11 @@
+---
+# Default variables for lima_disks role
+
+# Filesystem type for additional disks
+disk_filesystem: xfs
+
+# Mount point base directory
+mount_base: /mnt
+
+# Create MinIO data subdirectories
+create_minio_data_dirs: true

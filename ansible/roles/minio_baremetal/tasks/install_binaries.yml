@@ -1,4 +1,6 @@
 ---
+# Install MinIO binaries
+
 - name: Download MinIO server binary
   ansible.builtin.get_url:
     url: "{{ minio_binary_url }}"
@@ -23,8 +25,8 @@
     dest: "/usr/local/bin/{{ item }}"
     state: link
   loop:
-  - minio
-  - mc
+    - minio
+    - mc
 
 - name: Verify MinIO installation
   ansible.builtin.command: /usr/local/bin/minio --version

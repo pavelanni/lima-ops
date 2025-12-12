@@ -211,15 +211,16 @@ cmd_configure() {
 # Execute mount-disks command
 cmd_mount_disks() {
     log "Mounting additional disks on VMs..."
-    
+
     local inventory_file="$PROJECT_ROOT/ansible/inventory/${CLUSTER_NAME}.ini"
     require_file "$inventory_file" "Inventory file"
-    
+
     run_ansible_playbook \
         "playbooks/configuration/mount_disks.yml" \
         --inventory "$inventory_file" \
-        -e "target_cluster=$CLUSTER_NAME"
-    
+        -e "target_cluster=$CLUSTER_NAME" \
+        -e "config_file=$CONFIG_FILE"
+
     log "Disk mounting completed successfully"
 }
 
@@ -257,6 +258,7 @@ cmd_deploy() {
             run_ansible_playbook \
                 "playbooks/kubernetes/deploy_kubernetes_minio.yml" \
                 --inventory "$inventory_file" \
+                --config "$CONFIG_FILE" \
                 -e "target_cluster=$CLUSTER_NAME"
             ;;
         baremetal)
@@ -264,6 +266,7 @@ cmd_deploy() {
             run_ansible_playbook \
                 "playbooks/baremetal/deploy_baremetal_minio.yml" \
                 --inventory "$inventory_file" \
+                --config "$CONFIG_FILE" \
                 -e "target_cluster=$CLUSTER_NAME"
             ;;
         *)

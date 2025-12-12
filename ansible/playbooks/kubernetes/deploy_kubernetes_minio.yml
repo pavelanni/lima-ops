@@ -5,7 +5,7 @@
   gather_facts: no
 
   vars_files:
-    - ../../vars/cluster_config.yml
+    - "../../{{ config_file | default('vars/cluster_config.yml') }}"
 
   tasks:
     - name: Override cluster name if specified

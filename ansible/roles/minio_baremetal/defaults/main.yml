@@ -1,0 +1,14 @@
+---
+# Default variables for minio_baremetal role
+
+# MinIO user/group configuration
+minio_user: minio
+minio_group: minio
+minio_home: /opt/minio
+
+# MinIO binary URLs (architecture-aware)
+minio_binary_url: "https://dl.min.io/server/minio/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/minio"
+minio_client_url: "https://dl.min.io/client/mc/release/linux-{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}/mc"
+
+# MinIO data directory base path
+minio_data_dir: /mnt

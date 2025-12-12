@@ -1,0 +1,11 @@
+---
+# Handlers for minio_baremetal role
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart minio
+  ansible.builtin.systemd:
+    name: minio
+    state: restarted

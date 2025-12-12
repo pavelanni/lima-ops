@@ -1,0 +1,14 @@
+---
+# Main tasks for minio_baremetal role
+
+- name: Create MinIO user and group
+  ansible.builtin.include_tasks: setup_user.yml
+
+- name: Install MinIO binaries
+  ansible.builtin.include_tasks: install_binaries.yml
+
+- name: Configure MinIO service
+  ansible.builtin.include_tasks: configure_service.yml
+
+- name: Start MinIO service
+  ansible.builtin.include_tasks: start_service.yml

@@ -1,18 +1,18 @@
 ---
 - name: Configure Lima VMs
   hosts: "{{ target_cluster | default('demo-k8s') }}_all"
-  gather_facts: yes
-  become: yes
-  
+  gather_facts: true
+  become: true
+
   vars_files:
     - "../../{{ config_file | default('vars/cluster_config.yml') }}"
-  
-  tasks:
+
+  pre_tasks:
     - name: Update package cache
       ansible.builtin.package:
-        update_cache: yes
+        update_cache: true
       when: ansible_os_family == "Debian"
-    
+
     - name: Install required packages
       ansible.builtin.package:
         name:
@@ -23,17 +23,33 @@
           - bc
           - lsof
         state: present
-    
-    - name: Configure additional disks (bare-metal only)
-      ansible.builtin.include_tasks: ../../tasks/configure_disks.yml
-      loop: "{{ additional_disks | default([]) }}"
-      loop_control:
-        loop_var: disk_item
-      when: 
-        - deployment.type == "baremetal"
-        - additional_disks is defined 
+
+    # Parse additional_disks from JSON string if needed (inventory stores it as string)
+    - name: Parse additional_disks from JSON string
+      ansible.builtin.set_fact:
+        parsed_disks: "{{ additional_disks | from_json }}"
+      when:
+        - additional_disks is defined
+        - additional_disks is string
         - additional_disks | length > 0
-    
+
+    - name: Use additional_disks directly if already a list
+      ansible.builtin.set_fact:
+        parsed_disks: "{{ additional_disks }}"
+      when:
+        - additional_disks is defined
+        - additional_disks is not string
+
+    - name: Set empty list if additional_disks not defined
+      ansible.builtin.set_fact:
+        parsed_disks: []
+      when: additional_disks is not defined
+
+  roles:
+    - role: lima_disks
+      when: deployment.type == "baremetal"
+
+  post_tasks:
     - name: Create directories for MinIO data (bare-metal only)
       ansible.builtin.file:
         path: "/mnt/{{ item.name }}/minio"
@@ -41,18 +57,17 @@
         mode: '0755'
         owner: root
         group: root
-      loop: "{{ additional_disks | default([]) }}"
-      when: 
+      loop: "{{ parsed_disks }}"
+      when:
         - deployment.type == "baremetal"
-        - additional_disks is defined
-        - additional_disks | length > 0
+        - parsed_disks | length > 0
         - "'data' in item.name"
-    
+
     - name: Display disk configuration status
       ansible.builtin.debug:
         msg: >-
           {% if deployment.type == "baremetal" %}
-          Configured {{ additional_disks | default([]) | length }} additional disk(s) on {{ inventory_hostname }} (bare-metal mode)
+          Configured {{ parsed_disks | length }} additional disk(s) on {{ inventory_hostname }} (bare-metal mode)
           {% else %}
           Skipped disk configuration on {{ inventory_hostname }} ({{ deployment.type }} mode - disks left raw for DirectPV)
           {% endif %}

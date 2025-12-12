@@ -1,12 +1,33 @@
 ---
 - name: Mount additional disks on Lima VMs
-  hosts: all
-  become: yes
-  gather_facts: yes
-  
+  hosts: "{{ target_cluster | default('demo-k8s') }}_all"
+  become: true
+  gather_facts: true
+
   vars_files:
-    - ../../vars/cluster_config.yml
-  
-  tasks:
-    - name: Include disk mounting tasks
-      include_tasks: ../../tasks/mount_additional_disks.yml
+    - "../../{{ config_file | default('vars/cluster_config.yml') }}"
+
+  pre_tasks:
+    # Parse additional_disks from JSON string if needed (inventory stores it as string)
+    - name: Parse additional_disks from JSON string
+      ansible.builtin.set_fact:
+        parsed_disks: "{{ additional_disks | from_json }}"
+      when:
+        - additional_disks is defined
+        - additional_disks is string
+        - additional_disks | length > 0
+
+    - name: Use additional_disks directly if already a list
+      ansible.builtin.set_fact:
+        parsed_disks: "{{ additional_disks }}"
+      when:
+        - additional_disks is defined
+        - additional_disks is not string
+
+    - name: Set empty list if additional_disks not defined
+      ansible.builtin.set_fact:
+        parsed_disks: []
+      when: additional_disks is not defined
+
+  roles:
+    - role: lima_disks

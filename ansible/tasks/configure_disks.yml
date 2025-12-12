@@ -20,36 +20,36 @@
   ansible.builtin.set_fact:
     target_disk: "{{ item[0] }}"
   loop: "{{ disk_info }}"
-  when: 
+  when:
     - item[1] == disk_item.size
     - item[0] not in ansible_mounts | map(attribute='device') | list
-    - target_disk is not defined
+    - (target_disk | default('')) == ''
   loop_control:
     loop_var: item
 
 - name: Skip if no suitable disk found (expected for DirectPV/Kubernetes deployments)
   ansible.builtin.debug:
     msg: "No unmounted disk of size {{ disk_item.size }} found for {{ disk_item.name }} - skipping (may be intentional for DirectPV)"
-  when: target_disk is not defined
+  when: (target_disk | default('')) == ''
 
 - name: Check if disk already has partitions
   ansible.builtin.shell: |
     lsblk -no NAME {{ target_disk }} | tail -n +2
   register: existing_partitions
   changed_when: false
-  when: not ansible_check_mode and target_disk is defined
+  when: not ansible_check_mode and (target_disk | default('')) != ''
 
 - name: Set dummy partition info for check mode
   ansible.builtin.set_fact:
     existing_partitions: {"stdout_lines": []}
-  when: ansible_check_mode and target_disk is defined
+  when: ansible_check_mode and (target_disk | default('')) != ''
 
 - name: Create GPT partition table on {{ target_disk }}
   community.general.parted:
     device: "{{ target_disk }}"
     label: gpt
     state: present
-  when: target_disk is defined and existing_partitions.stdout_lines | length == 0
+  when: (target_disk | default('')) != '' and existing_partitions.stdout_lines | length == 0
 
 - name: Create primary partition on {{ target_disk }}
   community.general.parted:
@@ -60,21 +60,21 @@
     fs_type: xfs
     part_start: "1MiB"
     part_end: "100%"
-  when: target_disk is defined and existing_partitions.stdout_lines | length == 0
+  when: (target_disk | default('')) != '' and existing_partitions.stdout_lines | length == 0
 
 - name: Format partition as XFS
   community.general.filesystem:
     fstype: xfs
     dev: "{{ target_disk }}1"
     force: false
-  when: target_disk is defined and existing_partitions.stdout_lines | length == 0
+  when: (target_disk | default('')) != '' and existing_partitions.stdout_lines | length == 0
 
 - name: Create mount point
   ansible.builtin.file:
     path: "/mnt/{{ disk_item.name }}"
     state: directory
     mode: '0755'
-  when: target_disk is defined
+  when: (target_disk | default('')) != ''
 
 - name: Mount the disk
   ansible.posix.mount:
@@ -83,7 +83,7 @@
     fstype: xfs
     opts: defaults
     state: mounted
-  when: target_disk is defined
+  when: (target_disk | default('')) != ''
 
 - name: Add to fstab for persistent mounting
   ansible.posix.mount:
@@ -92,8 +92,8 @@
     fstype: xfs
     opts: defaults
     state: present
-  when: target_disk is defined
+  when: (target_disk | default('')) != ''
 
 - name: Reset target_disk variable
   ansible.builtin.set_fact:
-    target_disk: null
+    target_disk: ''

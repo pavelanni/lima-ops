@@ -182,12 +182,19 @@ Please use a cluster name without dashes, such as:
             fi
         fi
         
-        # Check for control plane nodes
-        local control_plane_count
-        control_plane_count=$(yq eval '[.kubernetes_cluster.nodes[] | select(.role == "control-plane")] | length' "$config_file" 2>/dev/null || echo 0)
-        
-        if [[ "$control_plane_count" -eq 0 ]]; then
-            error "No control-plane nodes defined in configuration"
+        # Check for control plane nodes (only required for Kubernetes deployments)
+        local deployment_type
+        deployment_type=$(yq eval '.deployment.type // "kubernetes"' "$config_file" 2>/dev/null)
+
+        if [[ "$deployment_type" == "kubernetes" ]]; then
+            local control_plane_count
+            control_plane_count=$(yq eval '[.kubernetes_cluster.nodes[] | select(.role == "control-plane")] | length' "$config_file" 2>/dev/null || echo 0)
+
+            if [[ "$control_plane_count" -eq 0 ]]; then
+                error "No control-plane nodes defined in configuration. Kubernetes deployments require at least one control-plane node."
+            fi
+        else
+            debug "Skipping control-plane node check for deployment type: $deployment_type"
         fi
         
         # Validate disk sizes against existing VMs (Lima doesn't support disk resize)

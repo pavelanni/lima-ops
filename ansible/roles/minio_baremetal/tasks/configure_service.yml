@@ -1,0 +1,40 @@
+---
+# Configure MinIO service
+
+- name: Add cluster hosts to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }}"
+    regexp: ".*{{ hostvars[item].ansible_hostname }}$"
+    state: present
+  loop: "{{ groups[target_cluster + '_all'] }}"
+
+- name: Build endpoints for each node
+  ansible.builtin.set_fact:
+    all_endpoints: "{{ all_endpoints | default([]) + node_endpoints }}"
+  loop: "{{ groups[target_cluster + '_all'] }}"
+  vars:
+    raw_disks: "{{ hostvars[item].additional_disks | default('[]') }}"
+    node_disks: "{{ raw_disks | from_json if raw_disks is string else raw_disks }}"
+    disk_names: "{{ node_disks | map(attribute='name') | list }}"
+    node_hostname: "{{ hostvars[item].ansible_hostname }}"
+    node_endpoints: "{{ disk_names | map('regex_replace', '^(.*)$', 'http://' + node_hostname + ':' + (minio.api_port | string) + '/mnt/\\1') | list }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Create MinIO environment file
+  ansible.builtin.template:
+    src: minio.env.j2
+    dest: /etc/default/minio
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Create MinIO systemd service file
+  ansible.builtin.template:
+    src: minio.service.j2
+    dest: /etc/systemd/system/minio.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd

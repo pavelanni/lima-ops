@@ -36,7 +36,7 @@
 
 - name: Create MinIO environment file
   ansible.builtin.template:
-    src: templates/minio.env.j2
+    src: ../../templates/minio.env.j2
     dest: /etc/default/minio
     owner: root
     group: root
@@ -44,7 +44,7 @@
 
 - name: Create MinIO systemd service file
   ansible.builtin.template:
-    src: templates/minio.service.j2
+    src: ../../templates/minio.service.j2
     dest: /etc/systemd/system/minio.service
     owner: root
     group: root

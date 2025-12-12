@@ -1,0 +1,35 @@
+---
+# Clean up legacy mounts (minio1, minio2, etc.) that conflict with inventory-defined mounts
+
+- name: Get current mounts
+  ansible.builtin.command: findmnt -J
+  register: current_mounts
+  changed_when: false
+  failed_when: false
+
+- name: Parse mount information
+  ansible.builtin.set_fact:
+    mount_info: "{{ current_mounts.stdout | from_json }}"
+  when: current_mounts.rc == 0
+
+- name: Find legacy MinIO mount points
+  ansible.builtin.set_fact:
+    legacy_mounts: "{{ mount_info.filesystems | default([]) | json_query('[].children[?starts_with(target, `/mnt/minio`)]') | flatten | default([]) }}"
+  when: mount_info is defined
+
+- name: Display legacy mounts found
+  ansible.builtin.debug:
+    msg: "Found {{ legacy_mounts | default([]) | length }} legacy mount(s) to clean up"
+
+- name: Unmount legacy MinIO mounts
+  ansible.posix.mount:
+    path: "{{ item.target }}"
+    state: unmounted
+  loop: "{{ legacy_mounts | default([]) }}"
+  when: legacy_mounts | default([]) | length > 0
+
+- name: Remove legacy fstab entries
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: ".*/mnt/minio[0-9]+.*"
+    state: absent

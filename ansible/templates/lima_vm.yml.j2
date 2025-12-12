@@ -1,11 +1,11 @@
 # lima_vm.yml.j2
 # This file defines a single Lima VM instance configuration
 
-# VM Image - using Rocky Linux 9.6 (matching your shell project)
+# VM Image - using Rocky Linux 9 (latest stable)
 images:
-- location: "https://dl.rockylinux.org/pub/rocky/9.6/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud-Base.latest.x86_64.qcow2"
   arch: "x86_64"
-- location: "https://dl.rockylinux.org/pub/rocky/9.6/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2"
+- location: "https://dl.rockylinux.org/pub/rocky/9/images/aarch64/Rocky-9-GenericCloud-Base.latest.aarch64.qcow2"
   arch: "aarch64"
 
 arch: "{{ 'aarch64' if ansible_architecture == 'arm64' else ansible_architecture | default('aarch64') }}"

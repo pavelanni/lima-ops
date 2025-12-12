@@ -1,0 +1,13 @@
+---
+# Configure disks based on inventory definition
+
+- name: Process each disk from inventory
+  ansible.builtin.include_tasks: configure_single_disk.yml
+  loop: "{{ parsed_disks }}"
+  loop_control:
+    loop_var: disk_item
+    index_var: disk_index
+
+- name: Display mount summary
+  ansible.builtin.debug:
+    msg: "Disk configuration complete. {{ parsed_disks | length }} disk(s) configured."
